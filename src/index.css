@@ -1,0 +1,191 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Brand Colors */
+    --olive: 82 32% 34%;
+    --olive-light: 82 25% 45%;
+    --olive-dark: 82 35% 25%;
+    
+    --amber: 38 92% 50%;
+    --amber-light: 38 92% 60%;
+    --amber-dark: 38 92% 40%;
+    
+    --trust-green: 142 70% 45%;
+    --trust-gold: 45 93% 47%;
+    --trust-premium: 262 83% 58%;
+    
+    /* Core */
+    --background: 0 0% 99%;
+    --foreground: 220 15% 15%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 15%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 15%;
+    
+    --primary: 82 32% 34%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 40 10% 96%;
+    --secondary-foreground: 220 15% 15%;
+    
+    --muted: 40 10% 96%;
+    --muted-foreground: 220 10% 45%;
+    
+    --accent: 38 92% 50%;
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 40 10% 90%;
+    --input: 40 10% 90%;
+    --ring: 82 32% 34%;
+    
+    --radius: 0.75rem;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08);
+    
+    /* Sidebar */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 220 15% 25%;
+    --sidebar-primary: 82 32% 34%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 40 10% 95%;
+    --sidebar-accent-foreground: 220 15% 15%;
+    --sidebar-border: 40 10% 90%;
+    --sidebar-ring: 82 32% 34%;
+  }
+
+  .dark {
+    --background: 220 15% 8%;
+    --foreground: 40 10% 95%;
+    
+    --card: 220 15% 10%;
+    --card-foreground: 40 10% 95%;
+    
+    --popover: 220 15% 10%;
+    --popover-foreground: 40 10% 95%;
+    
+    --primary: 82 40% 50%;
+    --primary-foreground: 220 15% 8%;
+    
+    --secondary: 220 15% 15%;
+    --secondary-foreground: 40 10% 95%;
+    
+    --muted: 220 15% 15%;
+    --muted-foreground: 40 10% 60%;
+    
+    --accent: 38 92% 50%;
+    --accent-foreground: 220 15% 8%;
+    
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 40 10% 95%;
+    
+    --border: 220 15% 18%;
+    --input: 220 15% 18%;
+    --ring: 82 40% 50%;
+    
+    --sidebar-background: 220 15% 10%;
+    --sidebar-foreground: 40 10% 90%;
+    --sidebar-primary: 82 40% 50%;
+    --sidebar-primary-foreground: 220 15% 8%;
+    --sidebar-accent: 220 15% 15%;
+    --sidebar-accent-foreground: 40 10% 95%;
+    --sidebar-border: 220 15% 18%;
+    --sidebar-ring: 82 40% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'DM Sans', sans-serif;
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  .container-tight {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  .card-premium {
+    @apply bg-card rounded-2xl border border-border shadow-[var(--shadow-md)] hover:shadow-[var(--shadow-xl)] transition-all duration-300;
+  }
+  
+  .badge-verified {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-trust-green/10 text-trust-green;
+  }
+  
+  .badge-trusted {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-trust-gold/10 text-trust-gold;
+  }
+  
+  .badge-premium {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-trust-premium/10 text-trust-premium;
+  }
+  
+  .text-gradient-olive {
+    @apply bg-gradient-to-r from-olive to-olive-light bg-clip-text text-transparent;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out forwards;
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease-out forwards;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes scaleIn {
+  from { 
+    opacity: 0; 
+    transform: scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1); 
+  }
+}
