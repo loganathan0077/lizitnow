@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
-import { 
-  Facebook, 
-  Twitter, 
-  Instagram, 
+import {
+  Facebook,
+  Twitter,
+  Instagram,
   Linkedin,
   Shield,
   Smartphone,
@@ -20,9 +20,9 @@ const Footer = () => {
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-10 h-10 rounded-xl bg-primary-foreground flex items-center justify-center">
-                <span className="text-foreground font-display font-bold text-xl">T</span>
+                <span className="text-foreground font-display font-bold text-xl">L</span>
               </div>
-              <span className="font-display text-xl font-bold">TrustMart</span>
+              <span className="font-display text-xl font-bold">Liyztit</span>
             </div>
             <p className="text-primary-foreground/70 text-sm mb-6">
               India's most trusted marketplace for genuine buyers and sellers. No spam, no scams.
@@ -96,7 +96,7 @@ const Footer = () => {
 
           {/* Bottom Bar */}
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-primary-foreground/50">
-            <p>© {currentYear} TrustMart. All rights reserved.</p>
+            <p>© {currentYear} Liyztit. All rights reserved.</p>
             <div className="flex gap-6">
               <Link to="/privacy" className="hover:text-primary-foreground transition-colors">Privacy Policy</Link>
               <Link to="/terms" className="hover:text-primary-foreground transition-colors">Terms of Service</Link>

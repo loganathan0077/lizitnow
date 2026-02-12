@@ -27,15 +27,15 @@ const Login = () => {
     const passwordInput = form.querySelector('input[type="password"]') as HTMLInputElement;
 
     if (mode === 'login' && method === 'email') {
-      if (emailInput?.value === 'test@trustmart.com' && passwordInput?.value === 'password123') {
+      if (emailInput?.value === 'test@liyztit.com' && passwordInput?.value === 'password123') {
         localStorage.setItem('isAuthenticated', 'true');
         toast.success('Login Successful', {
-          description: 'Welcome back to TrustMart!',
+          description: 'Welcome back to Liyztit!',
         });
         navigate('/dashboard');
       } else {
         toast.error('Invalid Credentials', {
-          description: 'Try: test@trustmart.com / password123',
+          description: 'Try: test@liyztit.com / password123',
         });
       }
     } else {
@@ -60,13 +60,13 @@ const Login = () => {
               </h1>
               <p className="text-muted-foreground">
                 {mode === 'login'
-                  ? 'Login to your TrustMart account'
+                  ? 'Login to your Liyztit account'
                   : 'Join our trusted marketplace'}
               </p>
               {mode === 'login' && (
                 <div className="mt-4 p-3 bg-blue-50 text-blue-700 rounded-md text-xs text-left border border-blue-100">
                   <p className="font-semibold mb-1">Testing Credentials:</p>
-                  <p>Email: <strong>test@trustmart.com</strong></p>
+                  <p>Email: <strong>test@liyztit.com</strong></p>
                   <p>Password: <strong>password123</strong></p>
                 </div>
               )}
@@ -77,8 +77,8 @@ const Login = () => {
               <button
                 onClick={() => setMethod('email')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors ${method === 'email'
-                    ? 'bg-card text-foreground shadow-soft'
-                    : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-card text-foreground shadow-soft'
+                  : 'text-muted-foreground hover:text-foreground'
                   }`}
               >
                 <Mail className="h-4 w-4" />
@@ -87,8 +87,8 @@ const Login = () => {
               <button
                 onClick={() => setMethod('phone')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors ${method === 'phone'
-                    ? 'bg-card text-foreground shadow-soft'
-                    : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-card text-foreground shadow-soft'
+                  : 'text-muted-foreground hover:text-foreground'
                   }`}
               >
                 <Phone className="h-4 w-4" />

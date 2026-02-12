@@ -118,7 +118,7 @@ const PostAd = () => {
                         <div>
                             <h1 className="text-2xl font-bold font-display text-foreground mb-2">Verification Required</h1>
                             <p className="text-muted-foreground">
-                                To maintain a safe marketplace, only verified sellers can post listings on TrustMart.
+                                To maintain a safe marketplace, only verified sellers can post listings on Liyztit.
                             </p>
                         </div>
                         <Button variant="accent" size="lg" className="w-full" asChild>
@@ -205,8 +205,8 @@ const PostAd = () => {
                                                     type="button"
                                                     onClick={() => setFormData(prev => ({ ...prev, condition: c }))}
                                                     className={`flex-1 py-2 text-sm font-medium rounded-lg capitalize transition-all ${formData.condition === c
-                                                            ? 'bg-card text-foreground shadow-sm'
-                                                            : 'text-muted-foreground hover:text-foreground'
+                                                        ? 'bg-card text-foreground shadow-sm'
+                                                        : 'text-muted-foreground hover:text-foreground'
                                                         }`}
                                                 >
                                                     {c.replace('-', ' ')}

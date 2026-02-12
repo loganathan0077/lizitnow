@@ -20,7 +20,7 @@ const Verification = () => {
             setIsSubmitting(false);
 
             toast.success('Verification Successful!', {
-                description: 'You are now a verified seller on TrustMart.',
+                description: 'You are now a verified seller on Liyztit.',
             });
 
             navigate('/dashboard');
