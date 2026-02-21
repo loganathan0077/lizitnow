@@ -13,6 +13,14 @@ import NotFound from "./pages/NotFound";
 import Verification from "./pages/Verification";
 import PostAd from "./pages/PostAd";
 import SellerProfile from './pages/SellerProfile';
+import AdminDashboard from './pages/AdminDashboard';
+import Pricing from './pages/Pricing';
+import HowItWorks from './pages/HowItWorks';
+import HelpCenter from './pages/HelpCenter';
+import SafetyTips from './pages/SafetyTips';
+import ContactUs from './pages/ContactUs';
+import ReportIssue from './pages/ReportIssue';
+import CategoryView from './pages/CategoryView';
 
 const queryClient = new QueryClient();
 
@@ -77,7 +85,23 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/help" element={<HelpCenter />} />
+            <Route path="/safety" element={<SafetyTips />} />
+            <Route path="/contact" element={<ContactUs />} />
+            <Route path="/report" element={<ReportIssue />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/:categorySlug" element={<CategoryView />} />
+            <Route path="/:categorySlug/:subcategorySlug" element={<CategoryView />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

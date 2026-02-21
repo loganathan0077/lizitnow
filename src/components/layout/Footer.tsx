@@ -22,7 +22,7 @@ const Footer = () => {
               <div className="w-10 h-10 rounded-xl bg-primary-foreground flex items-center justify-center">
                 <span className="text-foreground font-display font-bold text-xl">L</span>
               </div>
-              <span className="font-display text-xl font-bold">Liyztit</span>
+              <span className="font-display text-xl font-bold">Liztitnow.com</span>
             </div>
             <p className="text-primary-foreground/70 text-sm mb-6">
               India's most trusted marketplace for genuine buyers and sellers. No spam, no scams.
@@ -50,7 +50,7 @@ const Footer = () => {
               <li><Link to="/listings" className="text-primary-foreground/70 hover:text-primary-foreground transition-colors text-sm">Browse Ads</Link></li>
               <li><Link to="/post-ad" className="text-primary-foreground/70 hover:text-primary-foreground transition-colors text-sm">Post an Ad</Link></li>
               <li><Link to="/how-it-works" className="text-primary-foreground/70 hover:text-primary-foreground transition-colors text-sm">How It Works</Link></li>
-              <li><Link to="/pricing" className="text-primary-foreground/70 hover:text-primary-foreground transition-colors text-sm">Token Pricing</Link></li>
+              <li><Link to="/pricing" className="text-primary-foreground/70 hover:text-primary-foreground transition-colors text-sm">Membership Pricing</Link></li>
             </ul>
           </div>
 
@@ -96,7 +96,10 @@ const Footer = () => {
 
           {/* Bottom Bar */}
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-primary-foreground/50">
-            <p>© {currentYear} Liyztit. All rights reserved.</p>
+            <div className="text-center md:text-left">
+              <p>© {currentYear} Liztitnow.com</p>
+              <p>A product of Shermon Industries. All rights reserved.</p>
+            </div>
             <div className="flex gap-6">
               <Link to="/privacy" className="hover:text-primary-foreground transition-colors">Privacy Policy</Link>
               <Link to="/terms" className="hover:text-primary-foreground transition-colors">Terms of Service</Link>

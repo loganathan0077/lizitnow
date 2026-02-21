@@ -17,30 +17,60 @@ const Login = () => {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [method, setMethod] = useState<'email' | 'phone'>('email');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Form State
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [referralCode, setReferralCode] = useState('');
+  const [isGstRegistered, setIsGstRegistered] = useState(false);
+  const [gstin, setGstin] = useState('');
+  const [error, setError] = useState('');
+
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Quick & Dirty Mock Auth for Testing
-    const form = e.target as HTMLFormElement;
-    const emailInput = form.querySelector('input[type="email"]') as HTMLInputElement;
-    const passwordInput = form.querySelector('input[type="password"]') as HTMLInputElement;
 
-    if (mode === 'login' && method === 'email') {
-      if (emailInput?.value === 'test@liyztit.com' && passwordInput?.value === 'password123') {
-        localStorage.setItem('isAuthenticated', 'true');
-        toast.success('Login Successful', {
-          description: 'Welcome back to Liyztit!',
+    if (method === 'phone') {
+      toast.info('Phone login not implemented yet.', { description: 'Please use Email Login.' });
+      return;
+    }
+
+    try {
+      if (mode === 'login') {
+        const res = await fetch('http://localhost:5001/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
         });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to login');
+
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('token', data.token);
+
+        toast.success('Login Successful', { description: 'Welcome back to Liztitnow.com!' });
         navigate('/dashboard');
       } else {
-        toast.error('Invalid Credentials', {
-          description: 'Try: test@liyztit.com / password123',
+        const res = await fetch('http://localhost:5001/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password, referredByCode: referralCode || undefined, gstin: gstin || undefined })
         });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to register');
+
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('token', data.token);
+
+        toast.success('Registration Successful', { description: 'Welcome to Liztitnow.com!' });
+        navigate('/dashboard');
       }
-    } else {
-      toast.info('Sign up / Phone login not implemented in test mode.', {
-        description: 'Please use Email Login with test credentials.',
+    } catch (err: any) {
+      toast.error(mode === 'login' ? 'Login Failed' : 'Registration Failed', {
+        description: err.message || 'Check your details and try again',
       });
     }
   };
@@ -60,13 +90,13 @@ const Login = () => {
               </h1>
               <p className="text-muted-foreground">
                 {mode === 'login'
-                  ? 'Login to your Liyztit account'
+                  ? 'Login to your Liztitnow.com account'
                   : 'Join our trusted marketplace'}
               </p>
               {mode === 'login' && (
                 <div className="mt-4 p-3 bg-blue-50 text-blue-700 rounded-md text-xs text-left border border-blue-100">
                   <p className="font-semibold mb-1">Testing Credentials:</p>
-                  <p>Email: <strong>test@liyztit.com</strong></p>
+                  <p>Email: <strong>test@liztitnow.com</strong></p>
                   <p>Password: <strong>password123</strong></p>
                 </div>
               )}
@@ -105,7 +135,10 @@ const Login = () => {
                   </label>
                   <input
                     type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     placeholder="Enter your name"
+                    required
                     className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
@@ -119,7 +152,10 @@ const Login = () => {
                     </label>
                     <input
                       type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@example.com"
+                      required
                       className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
@@ -130,7 +166,10 @@ const Login = () => {
                     <div className="relative">
                       <input
                         type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         placeholder="••••••••"
+                        required
                         className="w-full h-12 px-4 pr-12 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                       />
                       <button
@@ -142,6 +181,58 @@ const Login = () => {
                       </button>
                     </div>
                   </div>
+
+                  {mode === 'signup' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Referral Code (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={referralCode}
+                          onChange={(e) => setReferralCode(e.target.value)}
+                          placeholder="e.g. A1B2C3"
+                          className="w-full h-12 px-4 mb-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-4 mt-2">
+                          <input
+                            type="checkbox"
+                            id="gstRegistered"
+                            checked={isGstRegistered}
+                            onChange={(e) => {
+                              setIsGstRegistered(e.target.checked);
+                              if (!e.target.checked) setGstin('');
+                            }}
+                            className="w-4 h-4 rounded border-primary/20 text-primary focus:ring-primary/20"
+                          />
+                          <label htmlFor="gstRegistered" className="text-sm font-medium text-foreground">
+                            GST Registered?
+                          </label>
+                        </div>
+
+                        {isGstRegistered && (
+                          <div>
+                            <label className="block text-sm font-medium text-foreground mb-2">
+                              GSTIN / GST Number
+                            </label>
+                            <input
+                              type="text"
+                              value={gstin}
+                              onChange={(e) => setGstin(e.target.value.toUpperCase())}
+                              placeholder="e.g. 07AAAAA0000A1Z5"
+                              required={isGstRegistered}
+                              pattern="^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$"
+                              title="Please enter a valid 15-character Indian GSTIN"
+                              className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 uppercase"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </>
               ) : (
                 <div>

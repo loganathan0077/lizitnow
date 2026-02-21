@@ -1,10 +1,19 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
-import { categories } from '@/data/mockData';
+import { useEffect, useState } from 'react';
 import CategoryCard from './CategoryCard';
 
 const CategoriesSection = () => {
+  const [categories, setCategories] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('http://localhost:5001/api/categories')
+      .then(res => res.json())
+      .then(data => setCategories(data.categories || []))
+      .catch(err => console.error(err));
+  }, []);
+
   return (
     <section className="py-16 md:py-24">
       <div className="container-tight">

@@ -15,8 +15,9 @@ import {
 import { useLocationContext } from '@/context/LocationContext';
 import { locations } from '@/data/mockData';
 import { LocationFilter } from '../shared/LocationFilter';
-
 import SearchSuggestions from '../shared/SearchSuggestions';
+import CategoryNav from './CategoryNav';
+import { MobileCategoryAccordion } from './MobileCategoryAccordion';
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -76,45 +77,52 @@ const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
-      <div className="container-tight">
-        <div className="flex items-center justify-between h-16 md:h-20">
+    <header className="sticky top-0 z-50 flex flex-col w-full shadow-md">
+      {/* Top Main Header */}
+      <div className="bg-primary text-primary-foreground relative z-20">
+        <div className="container-tight h-16 md:h-[72px] flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+          <Link to="/" className="flex items-center gap-2 group">
+            <div className="w-10 h-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center group-hover:bg-primary-foreground/30 transition-colors">
               <span className="text-primary-foreground font-display font-bold text-xl">L</span>
             </div>
-            <span className="font-display text-xl font-bold text-foreground hidden sm:block">
-              Liyztit
+            <span className="font-display text-xl font-bold text-primary-foreground hidden sm:block tracking-wide">
+              Liztitnow.com
             </span>
           </Link>
 
           {/* Search Bar - Desktop */}
-          <div className="hidden md:flex flex-1 max-w-xl mx-8 relative">
-            <div className="relative w-full flex items-center bg-secondary rounded-xl border border-transparent focus-within:border-primary/20 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-              <div className="w-[180px] border-r border-border/50">
+          <div className="hidden md:flex flex-1 max-w-2xl mx-12 relative">
+            <div className="relative w-full flex items-center bg-background rounded-sm shadow-sm overflow-hidden h-10 focus-within:ring-2 focus-within:ring-primary-foreground/50 transition-all">
+              <div className="w-[150px] border-r border-border/40 bg-muted/30 flex-shrink-0">
                 <LocationFilter
                   value={selectedLocation}
                   onChange={setSelectedLocation}
-                  className="h-11 w-full rounded-l-xl rounded-r-none border-0 px-3 hover:bg-transparent focus:ring-0"
+                  className="h-full w-full border-0 px-3 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 focus:ring-0 text-[13px] font-medium transition-colors text-foreground"
                   placeholder="Location"
                 />
               </div>
-              <div className="relative flex-1">
+              <div className="relative flex-1 h-full flex items-center bg-background">
                 <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground cursor-pointer hover:text-primary transition-colors"
-                  onClick={handleSearch}
+                  className="absolute left-3.5 h-4 w-4 text-muted-foreground"
                 />
                 <input
                   type="text"
-                  placeholder="Search..."
-                  className="w-full h-11 pl-9 pr-4 rounded-r-xl bg-transparent border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0"
+                  placeholder="Search for products, brands and more"
+                  className="w-full h-full pl-10 pr-12 bg-transparent border-0 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleSearch}
                   onFocus={() => setShowSuggestions(true)}
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 />
+                <Button
+                  size="sm"
+                  className="absolute right-0 h-full px-5 rounded-none bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-semibold text-[13px]"
+                  onClick={handleSearch}
+                >
+                  Search
+                </Button>
               </div>
             </div>
             {showSuggestions && (
@@ -126,33 +134,34 @@ const Header = () => {
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-4 md:gap-6">
             {/* Post Ad Button */}
-            <Button variant="accent" size="lg" className="hidden sm:flex" asChild>
+            <Button variant="outline" size="sm" className="hidden sm:flex bg-primary-foreground/10 text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground hover:text-primary transition-colors h-9" asChild>
               <Link to="/post-ad">
-                <Plus className="h-5 w-5" />
-                <span>Post Ad</span>
+                <Plus className="h-4 w-4 mr-1" />
+                <span className="font-semibold">Post Ad</span>
               </Link>
             </Button>
 
             {/* User Menu */}
             {isAuthenticated ? (
-              <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full" />
-                </Button>
-                <Link to="/dashboard" className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center border border-border relative">
-                    <User className="h-5 w-5 text-primary" />
+              <div className="flex items-center gap-5">
+                <button className="relative text-primary-foreground/90 hover:text-primary-foreground transition-colors group">
+                  <Bell className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                  <span className="absolute -top-1 -right-1.5 w-2 h-2 bg-destructive rounded-full border border-primary" />
+                </button>
+                <Link to="/dashboard" className="flex items-center gap-2 group">
+                  <div className="w-8 h-8 rounded-full bg-primary-foreground/20 flex items-center justify-center relative group-hover:bg-primary-foreground/30 transition-colors">
+                    <User className="h-4 w-4 text-primary-foreground" />
                     {isVerified && (
-                      <BadgeCheck className="absolute -bottom-1 -right-1 h-4 w-4 text-blue-500 bg-card rounded-full" />
+                      <BadgeCheck className="absolute -bottom-1 -right-1 h-[14px] w-[14px] text-blue-500 bg-card rounded-full" />
                     )}
                   </div>
+                  <span className="text-sm font-medium text-primary-foreground hidden lg:block group-hover:text-primary-foreground/80">Account</span>
                 </Link>
               </div>
             ) : (
-              <Button variant="outline" asChild>
+              <Button variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground hidden sm:flex font-semibold" asChild>
                 <Link to="/login">
                   <User className="h-4 w-4 mr-2" />
                   Login
@@ -163,7 +172,7 @@ const Header = () => {
             {/* Mobile Menu Toggle */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden flex items-center justify-center w-11 h-11 rounded-xl bg-secondary hover:bg-muted transition-colors"
+              className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 text-primary-foreground transition-colors"
             >
               {isMobileMenuOpen ? (
                 <X className="h-5 w-5 text-foreground" />
@@ -173,65 +182,77 @@ const Header = () => {
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden pb-4 animate-slide-up">
-            {/* Mobile Search */}
-            <div className="relative mb-4">
-              <Search
-                className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground cursor-pointer hover:text-primary transition-colors"
-                onClick={handleSearch}
-              />
-              <input
-                type="text"
-                placeholder="Search products..."
-                className="w-full h-11 pl-12 pr-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={handleSearch}
-              />
-            </div>
+      {/* Desktop Category Nav - Separated Bottom Tier */}
+      <div className="hidden md:block bg-card border-b border-border shadow-sm relative z-10">
+        <div className="container-tight">
+          <CategoryNav />
+        </div>
+      </div>
 
-            {/* Mobile Nav Links */}
-            <div className="flex flex-col gap-2">
-              {!isAuthenticated && (
-                <Button variant="outline" className="w-full justify-start" asChild>
-                  <Link to="/login">
-                    <LogIn className="h-5 w-5" />
-                    <span>Login / Sign Up</span>
-                  </Link>
-                </Button>
-              )}
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden pb-4 animate-slide-up">
+          {/* Mobile Search */}
+          <div className="relative mb-4">
+            <Search
+              className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground cursor-pointer hover:text-primary transition-colors"
+              onClick={handleSearch}
+            />
+            <input
+              type="text"
+              placeholder="Search products..."
+              className="w-full h-11 pl-12 pr-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearch}
+            />
+          </div>
 
-              <Button variant="accent" className="w-full justify-start" asChild>
-                <Link to={isAuthenticated ? "/post-ad" : "/login"}>
-                  <Plus className="h-5 w-5" />
-                  <span>Post Ad</span>
+          {/* Mobile Nav Links */}
+          <div className="flex flex-col gap-2">
+            {!isAuthenticated && (
+              <Button variant="outline" className="w-full justify-start" asChild>
+                <Link to="/login">
+                  <LogIn className="h-5 w-5" />
+                  <span>Login / Sign Up</span>
                 </Link>
               </Button>
+            )}
 
-              {isAuthenticated && (
-                <>
-                  <Link
-                    to="/dashboard/wallet"
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary"
-                  >
-                    <Wallet className="h-5 w-5 text-amber" />
-                    <span className="font-semibold">0 Tokens</span>
+            <Button variant="accent" className="w-full justify-start" asChild>
+              <Link to={isAuthenticated ? "/post-ad" : "/login"}>
+                <Plus className="h-5 w-5" />
+                <span>Post Ad</span>
+              </Link>
+            </Button>
+
+            {isAuthenticated && (
+              <>
+                <Link
+                  to="/dashboard/wallet"
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary"
+                >
+                  <Wallet className="h-5 w-5 text-amber" />
+                  <span className="font-semibold">0 Tokens</span>
+                </Link>
+                <Button variant="ghost" className="w-full justify-start" asChild>
+                  <Link to="/dashboard">
+                    <User className="h-5 w-5" />
+                    <span>My Dashboard</span>
                   </Link>
-                  <Button variant="ghost" className="w-full justify-start" asChild>
-                    <Link to="/dashboard">
-                      <User className="h-5 w-5" />
-                      <span>My Dashboard</span>
-                    </Link>
-                  </Button>
-                </>
-              )}
-            </div>
+                </Button>
+              </>
+            )}
           </div>
-        )}
-      </div>
+
+          {/* Dynamic Mobile Categories Accordion */}
+          <div className="max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+            <MobileCategoryAccordion onClose={() => setIsMobileMenuOpen(false)} />
+          </div>
+        </div>
+      )}
     </header>
   );
 };

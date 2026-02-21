@@ -15,23 +15,22 @@ const TokenCTA = () => {
             <div className="text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 text-primary-foreground text-sm font-medium mb-4">
                 <Coins className="h-4 w-4" />
-                <span>Token System</span>
+                <span>Free Ads & Membership</span>
               </div>
               <h2 className="font-display text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
                 Start Selling Today!
               </h2>
               <p className="text-lg text-primary-foreground/80 max-w-xl mb-2">
-                Get <span className="font-semibold text-amber">20 free tokens</span> when you sign up. 
-                Post your first 4 ads for free!
+                New users can post <span className="font-semibold text-amber">5 ads completely free!</span>
               </p>
               <p className="text-primary-foreground/60">
-                Each ad costs just 5 tokens • Recharge anytime from ₹100
+                After 5 free ads, unlock unlimited posting for 6 months with a ₹100 membership.
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button 
-                variant="accent" 
+              <Button
+                variant="accent"
                 size="xl"
                 className="min-w-[180px]"
                 asChild
@@ -41,8 +40,8 @@ const TokenCTA = () => {
                   <ArrowRight className="h-5 w-5" />
                 </Link>
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="xl"
                 className="min-w-[180px] border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
                 asChild

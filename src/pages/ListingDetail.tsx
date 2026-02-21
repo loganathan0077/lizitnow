@@ -15,7 +15,13 @@ import {
   Calendar,
   BarChart3,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Check,
+  Flame,
+  TrendingDown,
+  Eye,
+  ShieldCheck,
+  Youtube
 } from 'lucide-react';
 import { listings, formatPrice } from '@/data/mockData';
 import { useState } from 'react';
@@ -83,6 +89,54 @@ const ListingDetail = () => {
 
   // Safe access for new property with fallback
   const isSellerOnline = (listing.seller as any).isOnline ?? false;
+
+  const getYouTubeId = (url: string) => {
+    const p = /^(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})(?:\S+)?$/;
+    const match = url.match(p);
+    return match ? match[1] : null;
+  };
+  const videoId = listing.videoUrl ? getYouTubeId(listing.videoUrl) : null;
+
+  const renderSmartPrice = () => {
+    if (!listing.marketPrice || listing.marketPrice <= listing.price) return null;
+
+    const savings = listing.marketPrice - listing.price;
+    const savePercent = Math.round((savings / listing.marketPrice) * 100);
+
+    if (listing.category === 'real-estate') {
+      const score = Math.min(10, 5 + (savePercent / 5)).toFixed(1);
+      return (
+        <div className="bg-amber/10 border border-amber/20 rounded-xl p-4 mb-6 flex items-start gap-4">
+          <div className="w-12 h-12 rounded-full bg-amber/20 flex items-center justify-center shrink-0">
+            <Flame className="w-6 h-6 text-amber" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <h4 className="font-bold text-lg text-amber-900 dark:text-amber-500">🔥 Deal Score: {score} / 10</h4>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Priced <strong>{formatPrice(savings)}</strong> below market average! Great investment opportunity.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-trust-green/10 border border-trust-green/20 rounded-xl p-4 mb-6 flex items-start gap-4">
+        <div className="w-12 h-12 rounded-full bg-trust-green/20 flex items-center justify-center shrink-0">
+          <TrendingDown className="w-6 h-6 text-trust-green" />
+        </div>
+        <div>
+          <h4 className="font-bold text-lg text-trust-green mb-1">Smart Price Suggestion</h4>
+          <div className="flex items-end gap-3 text-sm">
+            <div className="line-through text-muted-foreground">Market: {formatPrice(listing.marketPrice)}</div>
+            <div className="font-semibold text-trust-green">You Save: {formatPrice(savings)} ({savePercent}%)</div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -165,27 +219,87 @@ const ListingDetail = () => {
 
               {/* Product Details */}
               <div className="card-premium p-6">
-                <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground mb-2">
+                <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground mb-4">
                   {listing.title}
                 </h1>
 
-                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6">
-                  <div className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    {listing.location}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    Posted {timeAgo(listing.createdAt)}
-                  </div>
-                  <span className="px-2.5 py-1 rounded-lg bg-muted text-muted-foreground text-xs font-medium">
-                    {conditionLabels[listing.condition as keyof typeof conditionLabels]}
+                {/* Quick Info Badges */}
+                <div className="flex flex-wrap items-center gap-2 mb-6">
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-sm font-medium text-foreground">
+                    <MapPin className="h-4 w-4 text-muted-foreground" /> {listing.location}
                   </span>
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-sm font-medium text-foreground">
+                    <Clock className="h-4 w-4 text-muted-foreground" /> Posted {timeAgo(listing.createdAt)}
+                  </span>
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-sm font-medium text-foreground capitalize">
+                    {conditionLabels[listing.condition as keyof typeof conditionLabels]} Condition
+                  </span>
+                  {listing.views && (
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-sm font-medium text-foreground">
+                      <Eye className="h-4 w-4 text-muted-foreground" /> {listing.views} Views
+                    </span>
+                  )}
+                  {listing.dynamicFields?.['Warranty'] && (
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-trust-green/10 text-trust-green text-sm font-bold">
+                      <ShieldCheck className="h-4 w-4" /> Warranty Included
+                    </span>
+                  )}
                 </div>
+
+                {renderSmartPrice()}
+
+                {/* What You Get Section */}
+                {listing.includedItems && listing.includedItems.length > 0 && (
+                  <div className="mb-6 p-5 rounded-xl bg-secondary/50 border border-border">
+                    <h3 className="font-semibold text-foreground mb-3">Included Extras</h3>
+                    <ul className="grid sm:grid-cols-2 gap-3">
+                      {listing.includedItems.map((item, idx) => (
+                        <li key={idx} className="flex items-center gap-2 text-muted-foreground text-sm font-medium">
+                          <Check className="h-4 w-4 text-trust-green shrink-0" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Structured Product Details */}
+                {listing.dynamicFields && Object.keys(listing.dynamicFields).length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="font-display font-semibold text-lg mb-4">Key Specifications</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {Object.entries(listing.dynamicFields).map(([key, value]) => (
+                        <div key={key} className="bg-secondary p-3.5 rounded-lg border border-border/50">
+                          <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">{key}</div>
+                          <div className="font-bold text-sm text-foreground">{String(value)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Video Embed */}
+                {videoId && (
+                  <div className="mb-8 p-1 border border-border rounded-xl bg-secondary/20">
+                    <div className="flex items-center gap-2 mb-3 px-3 pt-3">
+                      <Youtube className="h-5 w-5 text-red-600" />
+                      <h3 className="font-display font-semibold text-lg">Product Video</h3>
+                    </div>
+                    <div className="relative aspect-video rounded-lg overflow-hidden bg-black/5">
+                      <iframe
+                        src={`https://www.youtube.com/embed/${videoId}?loop=0&controls=1`}
+                        title="YouTube video player"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        className="absolute inset-0 w-full h-full border-0"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div className="border-t border-border pt-6">
                   <h3 className="font-display font-semibold text-lg mb-3">Description</h3>
-                  <p className="text-muted-foreground leading-relaxed">
+                  <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
                     {listing.description}
                   </p>
                 </div>
@@ -201,7 +315,7 @@ const ListingDetail = () => {
                 </div>
 
                 {/* Action Buttons: FIXED ALIGNMENT */}
-                <div className="flex items-center gap-3 mb-6">
+                <div className="hidden lg:flex items-center gap-3 mb-6">
                   <Button
                     variant="accent"
                     size="lg"
@@ -307,6 +421,42 @@ const ListingDetail = () => {
       </main>
 
       <Footer />
+
+      {/* Mobile Sticky Action Bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-md border-t border-border z-40 flex items-center gap-3">
+        <Button
+          variant="accent"
+          size="lg"
+          className="flex-[2] gap-2 shadow-sm font-bold"
+          onClick={() => setIsContactOpen(true)}
+        >
+          <MessageCircle className="h-5 w-5 shrink-0" />
+          Chat Now
+        </Button>
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={() => {
+            setIsFavorited(!isFavorited);
+            toast.success(isFavorited ? "Item Saved" : "Removed from Saved");
+          }}
+          className={cn(
+            "flex-1 gap-2 font-bold",
+            isFavorited && "text-destructive border-destructive bg-destructive/5"
+          )}
+        >
+          <Heart className={cn("h-5 w-5", isFavorited && "fill-current")} />
+          Save
+        </Button>
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={handleShare}
+          className="px-3 shrink-0"
+        >
+          <Share2 className="h-5 w-5" />
+        </Button>
+      </div>
 
       {/* Replaced Dialog with WhatsApp-style Chat Sheet */}
       <ChatSheet

@@ -19,7 +19,10 @@ import {
     Star,
     ShoppingBag,
     AlertCircle,
-    Ban
+    Ban,
+    Facebook,
+    Instagram,
+    Twitter
 } from 'lucide-react';
 import { ReportDialog } from '@/components/shared/ReportDialog';
 import { mockAds } from './Dashboard'; // Reusing mock ads for now
@@ -51,7 +54,10 @@ const mockSellerData: Seller = { // Renamed to mockSellerData to distinguish fro
         { id: 'r3', authorId: 'u4', authorName: 'Vikram R.', rating: 5, comment: 'Highly recommended seller.', date: '3 weeks ago' }
     ],
     isVerifiedMobile: true,
-    isVerifiedEmail: true
+    isVerifiedEmail: true,
+    facebookUrl: 'https://facebook.com/rahulsharma',
+    instagramUrl: 'https://instagram.com/rahul.sharma',
+    twitterUrl: 'https://twitter.com/rahul_trades'
 };
 
 const SellerProfile = () => {
@@ -135,6 +141,27 @@ const SellerProfile = () => {
                                         </Button>
                                     </div>
                                 </div>
+
+                                {/* Social URLs */}
+                                {(mockSeller.facebookUrl || mockSeller.instagramUrl || mockSeller.twitterUrl) && (
+                                    <div className="flex items-center gap-3">
+                                        {mockSeller.facebookUrl && (
+                                            <a href={mockSeller.facebookUrl} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-secondary hover:bg-secondary/80 text-blue-600 transition-colors">
+                                                <Facebook className="h-4 w-4" />
+                                            </a>
+                                        )}
+                                        {mockSeller.instagramUrl && (
+                                            <a href={mockSeller.instagramUrl} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-secondary hover:bg-secondary/80 text-pink-600 transition-colors">
+                                                <Instagram className="h-4 w-4" />
+                                            </a>
+                                        )}
+                                        {mockSeller.twitterUrl && (
+                                            <a href={mockSeller.twitterUrl} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-secondary hover:bg-secondary/80 text-sky-500 transition-colors">
+                                                <Twitter className="h-4 w-4" />
+                                            </a>
+                                        )}
+                                    </div>
+                                )}
 
                                 <div className="flex flex-wrap gap-6 p-4 bg-background/50 rounded-xl border border-border/50">
                                     <div className="text-center md:text-left">

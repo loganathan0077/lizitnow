@@ -21,6 +21,7 @@ export const categories: Category[] = [
   { id: '3', name: 'Furniture', icon: 'Sofa', slug: 'furniture', count: 943 },
   { id: '4', name: 'Home Appliances', icon: 'Refrigerator', slug: 'appliances', count: 1234 },
   { id: '5', name: 'Vehicles', icon: 'Car', slug: 'vehicles', count: 567 },
+  { id: '6', name: 'Real Estate', icon: 'MapPin', slug: 'real-estate', count: 342 },
 ];
 
 const mockSellerStats = {
@@ -113,6 +114,16 @@ export const listings: Listing[] = [
     featured: true,
     status: 'active',
     expiresAt: '2024-02-15',
+    marketPrice: 95000,
+    views: 1240,
+    includedItems: ['Original Box', 'Charger Cable', 'Documentation'],
+    dynamicFields: {
+      'RAM': '6GB',
+      'Storage': '256GB',
+      'Battery Health': '96%',
+      'Brand': 'Apple',
+      'Warranty': '1 Month Remaining'
+    }
   },
   {
     id: '2',
@@ -128,6 +139,16 @@ export const listings: Listing[] = [
     featured: true,
     status: 'active',
     expiresAt: '2024-02-14',
+    marketPrice: 90000,
+    views: 890,
+    includedItems: ['MagSafe Charger', 'Protective Case'],
+    dynamicFields: {
+      'RAM': '8GB',
+      'Storage': '256GB',
+      'Processor': 'M2 Chip',
+      'Brand': 'Apple',
+      'Warranty': 'Until Dec 2025'
+    }
   },
   {
     id: '3',
@@ -214,6 +235,38 @@ export const listings: Listing[] = [
     createdAt: '2024-01-08',
     status: 'active',
     expiresAt: '2024-02-08',
+    views: 156,
+    dynamicFields: {
+      'Material': 'Sheesham Wood',
+      'Assembly Required': 'Yes',
+      'Age': '2 years'
+    }
+  },
+  {
+    id: '9',
+    title: 'Premium Corner Plot - 1200 Sq.ft DTCP Approved',
+    description: 'Well-located land in a developing area with good road access. Clear documents and ready for registration. Suitable for residential or investment purpose.',
+    price: 3600000,
+    images: ['https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=800&auto=format&fit=crop'],
+    category: 'real-estate',
+    condition: 'new',
+    location: 'Bangalore, Karnataka',
+    seller: sellers[1],
+    createdAt: '2024-01-16',
+    featured: true,
+    status: 'active',
+    expiresAt: '2024-03-16',
+    marketPrice: 4200000,
+    views: 2450,
+    dynamicFields: {
+      'Plot Size (Sq.ft)': 1200,
+      'Price per Sq.ft': 3000,
+      'Approval Type': 'DTCP',
+      'Facing Direction': 'East',
+      'Corner Plot': 'Yes',
+      'Gated Community': 'Yes',
+      'Loan Available': 'Yes'
+    }
   },
 ];
 

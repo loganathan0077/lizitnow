@@ -3,40 +3,99 @@ import { Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, BadgeCheck, Loader2, Coins, Calendar, Image as ImageIcon } from 'lucide-react';
+import { ShieldAlert, BadgeCheck, Loader2, Coins, Calendar, Image as ImageIcon, Youtube } from 'lucide-react';
 import { toast } from 'sonner';
 import { Listing } from '@/types/marketplace';
 
+export interface Category {
+    id: string;
+    name: string;
+    slug: string;
+    subcategories: Subcategory[];
+}
+
+export interface Subcategory {
+    id: string;
+    name: string;
+    slug: string;
+    categoryId: string;
+    formFields: string; // JSON Array String
+    _count?: { ads: number };
+}
+
 const PostAd = () => {
     const navigate = useNavigate();
+    const [isMember, setIsMember] = useState(false);
     const [isVerified, setIsVerified] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [walletBalance, setWalletBalance] = useState(15); // Initial mock balance
+    const [adsPostedCount, setAdsPostedCount] = useState(0);
+
+    const [categories, setCategories] = useState<Category[]>([]);
 
     // Form State
     const [formData, setFormData] = useState({
         title: '',
         price: '',
-        category: '',
+        categoryId: '',
+        subcategoryId: '',
         description: '',
         location: 'Mumbai, India', // Default for now
-        condition: 'new'
+        condition: 'new',
+        videoUrl: ''
     });
 
+    const [dynamicFields, setDynamicFields] = useState<Record<string, string | number>>({});
+    const [includedItems, setIncludedItems] = useState('');
+
+    const handleDynamicFieldChange = (name: string, value: string) => {
+        setDynamicFields(prev => ({ ...prev, [name]: value }));
+    };
+
+    // Reset dynamic fields when subcategory changes
     useEffect(() => {
-        const verified = localStorage.getItem('isVerified') === 'true';
-        setIsVerified(verified);
+        setDynamicFields({});
+    }, [formData.subcategoryId]);
 
-        // Get wallet balance (simulated)
-        const storedBalance = localStorage.getItem('walletBalance');
-        if (storedBalance) {
-            setWalletBalance(parseInt(storedBalance));
-        } else {
-            localStorage.setItem('walletBalance', '15');
-        }
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    setIsVerified(false);
+                    setIsLoading(false);
+                    return;
+                }
 
-        setIsLoading(false);
+                // Fetch Categories
+                const catRes = await fetch('http://localhost:5001/api/categories');
+                if (catRes.ok) {
+                    const catData = await catRes.json();
+                    setCategories(catData.categories || []);
+                }
+
+                const res = await fetch('http://localhost:5001/api/auth/me', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    setIsVerified(true); // User is authenticated
+                    const user = data.user;
+                    const hasActiveMembership = user.membershipExpiry && new Date(user.membershipExpiry) > new Date();
+                    setIsMember(hasActiveMembership);
+                    setAdsPostedCount(user.adsPosted || 0);
+                } else {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('isAuthenticated');
+                    setIsVerified(false);
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchUser();
     }, []);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -44,64 +103,75 @@ const PostAd = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const isValidYouTubeUrl = (url: string) => {
+        if (!url) return true;
+        const p = /^(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})(?:\S+)?$/;
+        return (url.match(p)) ? true : false;
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (walletBalance < 5) {
-            toast.error('Insufficient Tokens', {
-                description: 'You need 5 tokens to post an ad. Please recharge your wallet.',
+        if (formData.videoUrl && !isValidYouTubeUrl(formData.videoUrl)) {
+            toast.error("Invalid Video Link", { description: "Please enter a valid YouTube URL." });
+            return;
+        }
+
+        if (!isMember && adsPostedCount >= 5) {
+            toast.error('Membership Required', {
+                description: 'You have used your 5 free ads. Please purchase a membership to continue posting.',
             });
             return;
         }
 
         setIsSubmitting(true);
 
-        // Simulate API call
-        setTimeout(() => {
-            // 1. Deduct Tokens
-            const newBalance = walletBalance - 5;
-            setWalletBalance(newBalance);
-            localStorage.setItem('walletBalance', newBalance.toString());
-
-            // 2. Create Ad Object
-            const now = new Date();
-            const expiresAt = new Date();
-            expiresAt.setDate(now.getDate() + 30); // 30 Days Validity
-
-            const newAd: Listing = {
-                id: Date.now().toString(),
+        try {
+            const payload = {
                 title: formData.title,
+                price: formData.price,
+                categoryId: formData.categoryId,
+                subcategoryId: formData.subcategoryId,
                 description: formData.description,
-                price: parseFloat(formData.price),
-                images: ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop'], // Mock Image
-                category: formData.category,
-                condition: formData.condition as any,
+                condition: formData.condition,
                 location: formData.location,
-                seller: {
-                    id: 'user-1',
-                    name: 'Rahul Sharma',
-                    badges: ['verified', 'trusted'],
-                    memberSince: '2023',
-                    adsPosted: 10,
-                    responseRate: 98
-                },
-                createdAt: now.toISOString(),
-                expiresAt: expiresAt.toISOString(),
-                status: 'active'
+                images: ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop'],
+                dynamicData: dynamicFields,
+                includedItems: includedItems.trim() ? includedItems.split(',').map(i => i.trim()) : undefined,
+                videoUrl: formData.videoUrl || undefined
             };
 
-            // 3. Save to LocalStorage
+            const token = localStorage.getItem('token');
+            const res = await fetch('http://localhost:5001/api/ads/post', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                toast.error('Failed to Post', { description: errorData.error });
+                setIsSubmitting(false);
+                return;
+            }
+
+            const adData = await res.json();
+
+            // 3. Save to LocalStorage mock as fallback
             const existingAds = JSON.parse(localStorage.getItem('myAds') || '[]');
-            localStorage.setItem('myAds', JSON.stringify([newAd, ...existingAds]));
+            localStorage.setItem('myAds', JSON.stringify([adData.ad, ...existingAds]));
 
             setIsSubmitting(false);
 
             toast.success('Ad Posted Successfully!', {
-                description: 'Your ad is now live for 30 days. 5 Tokens deducted.',
+                description: 'Your ad is now live for 30 days.',
             });
 
             navigate('/dashboard');
-        }, 1500);
+        } catch (error) {
+            toast.error('An error occurred');
+            setIsSubmitting(false);
+        }
     };
 
     if (isLoading) return null;
@@ -116,19 +186,19 @@ const PostAd = () => {
                             <ShieldAlert className="h-10 w-10 text-destructive" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold font-display text-foreground mb-2">Verification Required</h1>
+                            <h1 className="text-2xl font-bold font-display text-foreground mb-2">Membership Required</h1>
                             <p className="text-muted-foreground">
-                                To maintain a safe marketplace, only verified sellers can post listings on Liyztit.
+                                To maintain a safe marketplace, only paid members can post listings on Liztitnow.com.
                             </p>
                         </div>
                         <Button variant="accent" size="lg" className="w-full" asChild>
-                            <Link to="/verification">
+                            <Link to="/dashboard">
                                 <BadgeCheck className="h-5 w-5 mr-2" />
-                                Get Verified Now
+                                Buy Membership (₹100)
                             </Link>
                         </Button>
                         <Button variant="ghost" asChild>
-                            <Link to="/dashboard">Back to Dashboard</Link>
+                            <Link to="/">Back to Home</Link>
                         </Button>
                     </div>
                 </main>
@@ -181,20 +251,39 @@ const PostAd = () => {
                                         <div>
                                             <label className="block text-sm font-medium text-foreground mb-2">Category</label>
                                             <select
-                                                name="category"
+                                                name="categoryId"
                                                 required
-                                                value={formData.category}
-                                                onChange={handleInputChange}
+                                                value={formData.categoryId}
+                                                onChange={(e) => {
+                                                    setFormData(prev => ({ ...prev, categoryId: e.target.value, subcategoryId: '' }));
+                                                }}
                                                 className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
                                             >
                                                 <option value="">Select Category</option>
-                                                <option value="electronics">Electronics</option>
-                                                <option value="mobiles">Mobiles</option>
-                                                <option value="fashion">Fashion</option>
-                                                <option value="home">Home & Living</option>
+                                                {categories.map(cat => (
+                                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                                ))}
                                             </select>
                                         </div>
                                     </div>
+
+                                    {formData.categoryId && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-foreground mb-2">Subcategory</label>
+                                            <select
+                                                name="subcategoryId"
+                                                required
+                                                value={formData.subcategoryId}
+                                                onChange={handleInputChange}
+                                                className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
+                                            >
+                                                <option value="">Select Subcategory</option>
+                                                {categories.find(c => c.id === formData.categoryId)?.subcategories.map(sub => (
+                                                    <option key={sub.id} value={sub.id}>{sub.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
 
                                     <div>
                                         <label className="block text-sm font-medium text-foreground mb-2">Condition</label>
@@ -228,6 +317,70 @@ const PostAd = () => {
                                         />
                                     </div>
 
+                                    {/* Category Specific Fields */}
+                                    {formData.subcategoryId && (() => {
+                                        const subcat = categories
+                                            .find(c => c.id === formData.categoryId)
+                                            ?.subcategories.find(s => s.id === formData.subcategoryId);
+
+                                        if (!subcat || !subcat.formFields) return null;
+
+                                        let fields = [];
+                                        try {
+                                            fields = JSON.parse(subcat.formFields);
+                                        } catch (e) { console.error("Invalid JSON in formFields"); }
+
+                                        if (fields.length === 0) return null;
+
+                                        return (
+                                            <div className="pt-4 border-t border-border">
+                                                <h3 className="font-semibold text-foreground mb-4">Category Specific Details</h3>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {fields.map((field: any) => (
+                                                        <div key={field.name}>
+                                                            <label className="block text-sm font-medium text-foreground mb-2">{field.name}</label>
+                                                            {field.type === 'select' ? (
+                                                                <select
+                                                                    required
+                                                                    value={dynamicFields[field.name] || ''}
+                                                                    onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                                                                    className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
+                                                                >
+                                                                    <option value="">Select {field.name}</option>
+                                                                    {field.options?.map((opt: string) => (
+                                                                        <option key={opt} value={opt}>{opt}</option>
+                                                                    ))}
+                                                                </select>
+                                                            ) : (
+                                                                <input
+                                                                    type={field.type}
+                                                                    required
+                                                                    value={dynamicFields[field.name] || ''}
+                                                                    onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                                                                    placeholder={field.placeholder}
+                                                                    className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Included Items */}
+                                    <div className="pt-4 border-t border-border">
+                                        <label className="block text-sm font-medium text-foreground mb-2">What You Get (Included Items)</label>
+                                        <p className="text-xs text-muted-foreground mb-3">List items separated by commas (e.g. Original Charger, Box, Case)</p>
+                                        <input
+                                            type="text"
+                                            value={includedItems}
+                                            onChange={(e) => setIncludedItems(e.target.value)}
+                                            placeholder="Optional inclusions..."
+                                            className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                        />
+                                    </div>
+
                                     {/* Mock Image Upload */}
                                     <div>
                                         <label className="block text-sm font-medium text-foreground mb-2">Photos</label>
@@ -238,13 +391,30 @@ const PostAd = () => {
                                         </div>
                                     </div>
 
+                                    {/* Video Link */}
+                                    <div className="pt-4 border-t border-border">
+                                        <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                                            <Youtube className="h-4 w-4 text-red-600" />
+                                            Video Link (Optional)
+                                        </label>
+                                        <p className="text-xs text-muted-foreground mb-3">Paste a YouTube link to showcase your item in action.</p>
+                                        <input
+                                            type="url"
+                                            name="videoUrl"
+                                            value={formData.videoUrl}
+                                            onChange={handleInputChange}
+                                            placeholder="https://www.youtube.com/watch?v=..."
+                                            className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                        />
+                                    </div>
+
                                     <div className="pt-4">
                                         <Button
                                             type="submit"
                                             variant="accent"
                                             size="lg"
                                             className="w-full"
-                                            disabled={isSubmitting || walletBalance < 5}
+                                            disabled={isSubmitting || (!isMember && adsPostedCount >= 5)}
                                         >
                                             {isSubmitting ? (
                                                 <>
@@ -269,35 +439,39 @@ const PostAd = () => {
                                 <h3 className="font-display font-semibold text-lg text-foreground mb-4">Ad Summary</h3>
 
                                 <div className="space-y-4 mb-6">
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground flex items-center gap-2">
+                                    <div className="flex items-start justify-between text-sm">
+                                        <span className="text-muted-foreground flex items-center gap-2 shrink-0 pt-0.5">
                                             <Calendar className="h-4 w-4" /> Validity
                                         </span>
-                                        <span className="font-medium text-foreground">30 Days</span>
+                                        <span className="font-medium text-foreground text-right">30 Days</span>
                                     </div>
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground flex items-center gap-2">
+                                    <div className="flex items-start justify-between text-sm">
+                                        <span className="text-muted-foreground flex items-center gap-2 shrink-0 pt-0.5">
                                             <Coins className="h-4 w-4" /> Cost
                                         </span>
-                                        <span className="font-medium text-foreground">5 Tokens</span>
+                                        <span className="font-medium text-foreground text-right pl-2">
+                                            {isMember ? 'Included (Unlimited)' : (adsPostedCount < 5 ? `Free (${adsPostedCount}/5 used)` : '₹100 (Membership Required)')}
+                                        </span>
                                     </div>
                                     <div className="h-px bg-border my-2" />
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground">Your Balance</span>
-                                        <span className={`font-bold ${walletBalance < 5 ? 'text-destructive' : 'text-trust-green'}`}>
-                                            {walletBalance} Tokens
+                                    <div className="flex items-start justify-between text-sm">
+                                        <span className="text-muted-foreground flex items-center gap-2 shrink-0">
+                                            <BadgeCheck className="h-4 w-4" /> Membership
+                                        </span>
+                                        <span className={`font-bold text-right ${!isMember ? 'text-destructive' : 'text-trust-green'}`}>
+                                            {isMember ? 'Active' : 'Free Tier'}
                                         </span>
                                     </div>
                                 </div>
 
-                                {walletBalance < 5 && (
+                                {!isMember && adsPostedCount >= 5 && (
                                     <div className="p-3 bg-destructive/10 rounded-lg text-sm text-destructive mb-4">
-                                        You need at least 5 tokens to post an ad.
+                                        You have used your 5 free ads. Purchase a 6-month membership to continue posting.
                                     </div>
                                 )}
 
                                 <div className="bg-secondary/50 p-4 rounded-xl">
-                                    <h4 className="font-medium text-sm text-foreground mb-2">Trusted Marketplace Rules</h4>
+                                    <h4 className="font-medium text-sm text-foreground mb-2">Liztitnow Posting Rules</h4>
                                     <ul className="text-xs text-muted-foreground space-y-2 list-disc list-inside">
                                         <li>Ads are valid for 30 days only.</li>
                                         <li>No lifetime ads allowed.</li>

@@ -39,6 +39,9 @@ export type Seller = {
   reviews: Review[];
   isVerifiedMobile: boolean;
   isVerifiedEmail: boolean;
+  facebookUrl?: string;
+  instagramUrl?: string;
+  twitterUrl?: string;
 };
 
 export type Listing = {
@@ -55,6 +58,11 @@ export type Listing = {
   featured?: boolean;
   status: 'active' | 'pending' | 'sold' | 'expired' | 'rejected';
   expiresAt: string;
+  includedItems?: string[];
+  videoUrl?: string;
+  marketPrice?: number;
+  views?: number;
+  dynamicFields?: Record<string, string | number | boolean>;
 };
 
 export type User = {

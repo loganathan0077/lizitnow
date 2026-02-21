@@ -37,7 +37,7 @@ const TrustFeatures = () => {
       <div className="container-tight">
         <div className="text-center mb-12">
           <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Why Choose Liyztit?
+            Why Choose Liztitnow.com?
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             We've built a marketplace where trust comes first. No more wasting time on fake ads or unserious buyers.

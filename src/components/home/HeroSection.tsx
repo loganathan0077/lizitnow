@@ -52,14 +52,13 @@ const HeroSection = () => {
 
           {/* Headline */}
           <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 animate-slide-up">
-            Buy & Sell with{' '}
-            <span className="text-gradient-olive">Complete Trust</span>
+            Smart Deals{' '}
+            <span className="text-gradient-olive">Start Here</span>
           </h1>
 
           {/* Subheadline */}
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto animate-slide-up" style={{ animationDelay: '100ms' }}>
-            A premium marketplace where only verified sellers can post.
-            No spam, no scams — just genuine deals from real people.
+            Simple, safe, and smooth deals every time.
           </p>
 
           {/* Search Bar */}

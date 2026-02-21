@@ -42,6 +42,25 @@ const sortOptions = [
   { value: 'price-high', label: 'Price: High to Low' },
 ];
 
+const categorySpecificFilters: Record<string, { key: string, label: string, options: string[] }[]> = {
+  'real-estate': [
+    { key: 'Approval Type', label: 'Approval Type', options: ['DTCP', 'CMDA', 'Panchayat', 'NA'] },
+    { key: 'Facing Direction', label: 'Facing Direction', options: ['East', 'West', 'North', 'South'] },
+    { key: 'Corner Plot', label: 'Corner Plot', options: ['Yes', 'No'] }
+  ],
+  'furniture': [
+    { key: 'Material', label: 'Material', options: ['Wood', 'Plastic', 'Metal', 'Leather', 'Sheesham Wood'] },
+    { key: 'Assembly Required', label: 'Assembly Required', options: ['Yes', 'No'] }
+  ],
+  'mobiles': [
+    { key: 'RAM', label: 'RAM', options: ['4GB', '6GB', '8GB', '12GB', '16GB'] },
+    { key: 'Storage', label: 'Storage', options: ['64GB', '128GB', '256GB', '512GB', '1TB'] }
+  ],
+  'electronics': [
+    { key: 'Brand', label: 'Brand', options: ['Apple', 'Samsung', 'Sony', 'LG', 'HP', 'Dell'] }
+  ]
+};
+
 const Listings = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
@@ -54,6 +73,7 @@ const Listings = () => {
   const [priceRange, setPriceRange] = useState<[number | '', number | '']>([0, '']);
   const [locationFilter, setLocationFilter] = useState(searchParams.get('location') || 'All Locations');
   const [brandSearch, setBrandSearch] = useState('');
+  const [dynamicFilters, setDynamicFilters] = useState<Record<string, string>>({});
 
   const filteredListings = useMemo(() => {
     let result = [...listings];
@@ -94,6 +114,17 @@ const Listings = () => {
       result = result.filter(l => l.title.toLowerCase().includes(query));
     }
 
+    // Dynamic Specifications filter
+    Object.entries(dynamicFilters).forEach(([key, val]) => {
+      if (val) {
+        result = result.filter(l =>
+          l.dynamicFields &&
+          l.dynamicFields[key] &&
+          String(l.dynamicFields[key]).toLowerCase() === val.toLowerCase()
+        );
+      }
+    });
+
     // Sort
     switch (sortBy) {
       case 'price-low':
@@ -108,7 +139,7 @@ const Listings = () => {
     }
 
     return result;
-  }, [activeCategory, condition, sortBy, priceRange, locationFilter, brandSearch, globalSearch]);
+  }, [activeCategory, condition, sortBy, priceRange, locationFilter, brandSearch, globalSearch, dynamicFilters]);
 
   const handleCategoryChange = (slug: string) => {
     if (slug === 'all') {
@@ -116,6 +147,7 @@ const Listings = () => {
     } else {
       searchParams.set('category', slug);
     }
+    setDynamicFilters({}); // Reset dynamic filters when changing category
     setSearchParams(searchParams);
   };
 
@@ -134,6 +166,7 @@ const Listings = () => {
     setPriceRange([0, '']);
     setLocationFilter('All Locations');
     setBrandSearch('');
+    setDynamicFilters({});
 
     searchParams.delete('q');
     searchParams.delete('location');
@@ -294,6 +327,28 @@ const Listings = () => {
                   </div>
                 </div>
 
+                {/* Dynamic Category Filters */}
+                {categorySpecificFilters[activeCategory] && (
+                  <div className="pt-4 border-t border-border space-y-6">
+                    <h4 className="font-semibold text-sm text-primary mb-2">Category Filters</h4>
+                    {categorySpecificFilters[activeCategory].map((filter) => (
+                      <div key={filter.key}>
+                        <Label className="text-sm font-medium mb-2 block">{filter.label}</Label>
+                        <select
+                          value={dynamicFilters[filter.key] || ''}
+                          onChange={(e) => setDynamicFilters(prev => ({ ...prev, [filter.key]: e.target.value }))}
+                          className="w-full h-10 px-3 rounded-lg bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          <option value="">All {filter.label}</option>
+                          {filter.options.map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {/* Sort */}
                 <div className="pt-4 border-t border-border">
                   <Label className="text-sm font-medium mb-2 block">Sort By</Label>
@@ -387,6 +442,28 @@ const Listings = () => {
                       ))}
                     </div>
                   </div>
+
+                  {/* Dynamic Category Filters Mobile */}
+                  {categorySpecificFilters[activeCategory] && (
+                    <div className="pt-4 border-t border-border space-y-6">
+                      <h4 className="font-semibold text-sm text-primary mb-2">Category Filters</h4>
+                      {categorySpecificFilters[activeCategory].map((filter) => (
+                        <div key={filter.key}>
+                          <Label className="text-sm font-medium mb-2 block">{filter.label}</Label>
+                          <select
+                            value={dynamicFilters[filter.key] || ''}
+                            onChange={(e) => setDynamicFilters(prev => ({ ...prev, [filter.key]: e.target.value }))}
+                            className="w-full h-10 px-3 rounded-lg bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          >
+                            <option value="">All {filter.label}</option>
+                            {filter.options.map((opt) => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   <div>
                     <Label className="text-sm font-medium mb-2 block">Sort By</Label>

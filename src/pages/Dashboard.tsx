@@ -32,9 +32,15 @@ import {
   Trash2,
   Facebook,
   Instagram,
-  Twitter
+  Twitter,
+  Copy,
+  Star,
+  CreditCard,
+  Download,
+  Eye
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 // Mock user data
 const mockUser = {
@@ -72,6 +78,7 @@ const mockWishlistItems = [
 const sidebarLinks = [
   { icon: FileText, label: 'My Ads', href: '/dashboard', count: 8 },
   { icon: Wallet, label: 'Wallet', href: '/dashboard/wallet' },
+  { icon: FileText, label: 'Billing History', href: '/dashboard/billing' },
   { icon: Heart, label: 'Wishlist', href: '/dashboard/wishlist' },
   { icon: User, label: 'Profile', href: '/dashboard/profile' },
   { icon: Settings, label: 'Settings', href: '/dashboard/settings' },
@@ -79,7 +86,8 @@ const sidebarLinks = [
 
 const Dashboard = () => {
   const location = useLocation();
-  const [user, setUser] = useState(mockUser);
+  const navigate = useNavigate();
+  const [user, setUser] = useState<any>(null);
   const [ads, setAds] = useState(mockAds);
   const [wishlist, setWishlist] = useState(mockWishlistItems);
 
@@ -89,31 +97,85 @@ const Dashboard = () => {
 
   // Profile Form State
   const [profileForm, setProfileForm] = useState({
-    name: user.name,
-    phone: user.phone,
-    bio: user.bio,
-    facebook: user.socials?.facebook || '',
-    instagram: user.socials?.instagram || '',
-    twitter: user.socials?.twitter || '',
+    name: '',
+    phone: '',
+    address: '',
+    bio: '',
+    facebook: '',
+    instagram: '',
+    twitter: '',
+    isGstRegistered: false,
+    gstin: '',
   });
 
   // Determine active view based on path
   const currentPath = location.pathname;
   const isWalletView = currentPath.includes('/wallet');
+  const isBillingView = currentPath.includes('/billing');
   const isProfileView = currentPath.includes('/profile');
   const isSettingsView = currentPath.includes('/settings');
   const isWishlistView = currentPath.includes('/wishlist');
-  const isAdsView = !isWalletView && !isProfileView && !isSettingsView && !isWishlistView;
+  const isAdsView = !isWalletView && !isBillingView && !isProfileView && !isSettingsView && !isWishlistView;
+
+  const [billingHistory, setBillingHistory] = useState<any[]>([]);
 
   useEffect(() => {
-    const isVerified = localStorage.getItem('isVerified') === 'true';
-    if (isVerified) {
-      setUser(prev => ({
-        ...prev,
-        badges: ['verified', 'trusted']
-      }));
+    if (isBillingView && user) {
+      const fetchBilling = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const res = await fetch('http://localhost:5001/api/user/billing-history', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (res.ok) setBillingHistory(data.payments);
+        } catch (e) {
+          console.error(e);
+        }
+      };
+      fetchBilling();
     }
-  }, []);
+  }, [isBillingView, user]);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return navigate('/login');
+        const res = await fetch('http://localhost:5001/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          const fetchedUser = data.user;
+          // Add mock values required by existing UI temporarily
+          fetchedUser.badges = ['verified'];
+          fetchedUser.totalAds = 0; fetchedUser.activeAds = 0; fetchedUser.pendingAds = 0; fetchedUser.rejectedAds = 0;
+          fetchedUser.bio = ''; fetchedUser.socials = { facebook: '', instagram: '', twitter: '' };
+
+          setUser(fetchedUser);
+          setProfileForm({
+            name: fetchedUser.name,
+            phone: fetchedUser.phone || '',
+            address: fetchedUser.address || '',
+            bio: '',
+            facebook: fetchedUser.facebookUrl || '',
+            instagram: fetchedUser.instagramUrl || '',
+            twitter: fetchedUser.twitterUrl || '',
+            isGstRegistered: !!fetchedUser.gstin,
+            gstin: fetchedUser.gstin || ''
+          });
+        } else {
+          localStorage.removeItem('token');
+          localStorage.removeItem('isAuthenticated');
+          navigate('/login');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchUser();
+  }, [navigate]);
 
   const handleMarkAsSold = (e: React.MouseEvent, adId: string) => {
     e.preventDefault(); // Prevent navigation
@@ -128,11 +190,45 @@ const Dashboard = () => {
     });
   };
 
-  const handleRecharge = () => {
-    setUser(prev => ({ ...prev, walletBalance: prev.walletBalance + 50 }));
-    toast.success("Wallet Recharged", {
-      description: "50 Tokens added to your account.",
-    });
+  const handleBuyMembership = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5001/api/payment/create-order', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      const options = {
+        key: 'rzp_test_mock_key',
+        amount: data.amount,
+        currency: data.currency,
+        name: 'Liztitnow.com',
+        description: '6 Months Membership',
+        order_id: data.orderId,
+        handler: async function (response: any) {
+          const verifyRes = await fetch('http://localhost:5001/api/payment/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id || 'mock_pay_id',
+              razorpay_signature: response.razorpay_signature || 'mock_signature'
+            })
+          });
+          if (verifyRes.ok) {
+            toast.success('Membership Activated!');
+            window.location.reload();
+          } else {
+            toast.error('Payment verification failed');
+          }
+        },
+      };
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      toast.error('Failed to initiate payment');
+    }
   };
 
   const handleRemoveFromWishlist = (id: string) => {
@@ -140,22 +236,42 @@ const Dashboard = () => {
     toast.info("Item removed from wishlist");
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setUser(prev => ({
-      ...prev,
-      name: profileForm.name,
-      phone: profileForm.phone,
-      bio: profileForm.bio,
-      socials: {
-        facebook: profileForm.facebook,
-        instagram: profileForm.instagram,
-        twitter: profileForm.twitter
-      }
-    }));
-    toast.success("Profile Updated", {
-      description: "Your changes have been saved successfully.",
-    });
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5001/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          name: profileForm.name,
+          phone: profileForm.phone,
+          address: profileForm.address,
+          gstin: profileForm.gstin,
+          facebookUrl: profileForm.facebook,
+          instagramUrl: profileForm.instagram,
+          twitterUrl: profileForm.twitter
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update profile');
+
+      setUser(prev => ({
+        ...prev,
+        ...data.user,
+        bio: profileForm.bio,
+        socials: {
+          facebook: profileForm.facebook,
+          instagram: profileForm.instagram,
+          twitter: profileForm.twitter
+        }
+      }));
+      toast.success("Profile Updated", {
+        description: "Your changes have been saved successfully.",
+      });
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
   const handleChangePassword = () => {
@@ -183,6 +299,12 @@ const Dashboard = () => {
     rejected: XCircle,
     sold: BadgeCheck,
   };
+
+  if (!user) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+
+  const isMember = user.membershipExpiry && new Date(user.membershipExpiry) > new Date();
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -219,6 +341,26 @@ const Dashboard = () => {
                   </div>
                 </div>
 
+                {/* Membership Status */}
+                <div className="p-4 rounded-xl bg-primary/10 mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-primary">Membership</span>
+                    {isMember ? <Star className="h-5 w-5 text-trust-green fill-trust-green" /> : <Star className="h-5 w-5 text-muted-foreground" />}
+                  </div>
+                  <div className="font-display font-bold text-foreground">
+                    {isMember ? 'Active' : 'Expired / Free'}
+                  </div>
+                  {isMember ? (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Valid until {new Date(user.membershipExpiry).toLocaleDateString()}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-destructive mt-1">
+                      Buy membership to post ads
+                    </p>
+                  )}
+                </div>
+
                 {/* Wallet Balance */}
                 <div className="p-4 rounded-xl bg-amber/10 mb-4">
                   <div className="flex items-center justify-between mb-2">
@@ -226,21 +368,33 @@ const Dashboard = () => {
                     <Coins className="h-5 w-5 text-amber" />
                   </div>
                   <div className="text-2xl font-display font-bold text-foreground">
-                    {user.walletBalance} Tokens
+                    ₹{user.walletBalance}
                   </div>
-                  {user.walletBalance < 5 && (
-                    <p className="text-xs text-amber-dark mt-1">
-                      Low balance! Recharge to post more ads.
-                    </p>
-                  )}
+                  <p className="text-xs text-amber-dark mt-1">
+                    Earn ₹50 per referral checkout!
+                  </p>
                 </div>
 
-                <Button variant="accent" className="w-full" asChild>
-                  <Link to="/dashboard/wallet">
-                    Recharge Wallet
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
+                {/* Referral Code */}
+                <div className="p-4 rounded-xl border border-border mb-4">
+                  <div className="text-sm text-muted-foreground mb-1">Your Referral Code</div>
+                  <div className="flex items-center justify-between bg-secondary rounded-lg p-2">
+                    <span className="font-mono font-bold tracking-wider">{user.referralCode}</span>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
+                      navigator.clipboard.writeText(user.referralCode);
+                      toast.success('Referral code copied!');
+                    }}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {!isMember && (
+                  <Button variant="accent" className="w-full gap-2" onClick={handleBuyMembership}>
+                    <CreditCard className="h-4 w-4" />
+                    Buy Membership (₹100)
+                  </Button>
+                )}
               </div>
 
               {/* Navigation */}
@@ -390,15 +544,13 @@ const Dashboard = () => {
                       <Coins className="h-10 w-10 text-amber" />
                     </div>
                     <div>
-                      <div className="text-4xl font-display font-bold text-foreground">{user.walletBalance}</div>
-                      <div className="text-muted-foreground">Available Tokens</div>
+                      <div className="text-4xl font-display font-bold text-foreground">₹{user.walletBalance}</div>
+                      <div className="text-muted-foreground">Available Balance</div>
                     </div>
-                    <Button size="lg" className="w-full max-w-sm gap-2" onClick={handleRecharge}>
-                      <Plus className="h-5 w-5" />
-                      Add 50 Tokens (Mock)
-                    </Button>
-                    <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                      In a real application, this would redirect to a payment gateway. For this demo, clicking the button instantly adds tokens.
+
+                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                      Share your referral code <strong>{user.referralCode}</strong> with friends.
+                      You earn ₹50 when they buy their first 6-month membership!
                     </p>
                   </div>
 
@@ -409,6 +561,58 @@ const Dashboard = () => {
                     <div className="p-8 text-center text-muted-foreground">
                       No recent transactions found.
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* BILLING HISTORY VIEW */}
+              {isBillingView && (
+                <div className="space-y-6">
+                  <div>
+                    <h1 className="font-display text-2xl font-bold text-foreground">Billing History</h1>
+                    <p className="text-muted-foreground">View and download your past invoices</p>
+                  </div>
+
+                  <div className="card-premium overflow-hidden">
+                    <div className="p-4 border-b border-border">
+                      <h3 className="font-display font-semibold">Your Invoices</h3>
+                    </div>
+                    {billingHistory.length > 0 ? (
+                      <div className="divide-y divide-border">
+                        {billingHistory.map((invoice: any) => (
+                          <div key={invoice.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between hover:bg-muted/50 transition-colors gap-4">
+                            <div>
+                              <div className="font-medium text-foreground">{invoice.planName}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {invoice.invoiceNumber || 'Processing'} • {new Date(invoice.paymentDate).toLocaleDateString()}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="font-bold">₹{invoice.amount.toLocaleString()}</div>
+                              <span className="px-2.5 py-1 rounded-lg text-xs font-medium capitalize bg-trust-green/10 text-trust-green whitespace-nowrap">
+                                {invoice.status}
+                              </span>
+                              <Button size="sm" variant="outline" className="gap-2" asChild>
+                                <a href={`http://localhost:5001/api/invoices/${invoice.id}/download?token=${localStorage.getItem('token')}&action=view`} target="_blank" rel="noreferrer">
+                                  <Eye className="h-4 w-4" /> View
+                                </a>
+                              </Button>
+                              <Button size="sm" variant="outline" className="gap-2" asChild>
+                                <a href={`http://localhost:5001/api/invoices/${invoice.id}/download?token=${localStorage.getItem('token')}&action=download`} target="_blank" rel="noreferrer">
+                                  <Download className="h-4 w-4" /> Download
+                                </a>
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-12 text-center">
+                        <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+                        <h3 className="text-lg font-semibold">No billing history found</h3>
+                        <p className="text-muted-foreground mb-6">You haven't made any purchases yet.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -472,13 +676,61 @@ const Dashboard = () => {
                         <Button variant="outline" type="button">Change Avatar</Button>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Full Name</Label>
-                        <Input
-                          id="name"
-                          value={profileForm.name}
-                          onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))}
-                        />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Full Name</Label>
+                          <Input
+                            id="name"
+                            value={profileForm.name}
+                            onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="phone">Phone Number</Label>
+                          <Input
+                            id="phone"
+                            value={profileForm.phone}
+                            onChange={(e) => setProfileForm(prev => ({ ...prev, phone: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 p-5 border border-border rounded-xl bg-secondary/10">
+                        <h3 className="font-semibold text-foreground mb-2">Business Settings</h3>
+                        <div className="flex items-center gap-2 mb-4">
+                          <input
+                            type="checkbox"
+                            id="dashboardGstRegistered"
+                            checked={profileForm.isGstRegistered}
+                            onChange={(e) => {
+                              setProfileForm(prev => ({
+                                ...prev,
+                                isGstRegistered: e.target.checked,
+                                gstin: e.target.checked ? prev.gstin : ''
+                              }));
+                            }}
+                            className="w-4 h-4 rounded border-primary/20 text-primary focus:ring-primary/20"
+                          />
+                          <Label htmlFor="dashboardGstRegistered">
+                            I am GST Registered
+                          </Label>
+                        </div>
+
+                        {profileForm.isGstRegistered && (
+                          <div className="space-y-2">
+                            <Label htmlFor="gstin">GSTIN / GST Number</Label>
+                            <Input
+                              id="gstin"
+                              value={profileForm.gstin}
+                              onChange={(e) => setProfileForm(prev => ({ ...prev, gstin: e.target.value.toUpperCase() }))}
+                              placeholder="e.g. 07AAAAA0000A1Z5"
+                              className="uppercase"
+                              required={profileForm.isGstRegistered}
+                              pattern="^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$"
+                              title="Please enter a valid 15-character Indian GSTIN"
+                            />
+                          </div>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -488,11 +740,13 @@ const Dashboard = () => {
                           <p className="text-xs text-muted-foreground">Email cannot be changed</p>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="phone">Phone Number</Label>
-                          <Input
-                            id="phone"
-                            value={profileForm.phone}
-                            onChange={(e) => setProfileForm(prev => ({ ...prev, phone: e.target.value }))}
+                          <Label htmlFor="address">Full Address</Label>
+                          <Textarea
+                            id="address"
+                            rows={3}
+                            value={profileForm.address}
+                            onChange={(e) => setProfileForm(prev => ({ ...prev, address: e.target.value }))}
+                            placeholder="Enter your complete billing address..."
                           />
                         </div>
                       </div>

@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String    @id @default(uuid())
+  name             String
+  email            String    @unique
+  password         String
+  phone            String?
+  address          String?
+  role             String    @default("user") // admin, user
+  walletBalance    Int       @default(0) // Referral bonuses
+  referralCode     String    @unique
+  referredBy       String?   // The code of the user who referred this user
+  membershipExpiry DateTime? // If null or past date, not an active member
+  adsPosted        Int       @default(0) // Track number of ads posted
+  gstin            String?
+  isGstVerified    Boolean   @default(false)
+  facebookUrl      String?
+  instagramUrl     String?
+  twitterUrl       String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  payments         Payment[]
+  referralsMade    Referral[] @relation("Referrer")
+  referralsUsed    Referral[] @relation("ReferredUser")
+}
+
+model Payment {
+  id                String    @id @default(uuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id])
+  razorpayOrderId   String    @unique
+  razorpayPaymentId String?
+  amount            Int
+  status            String    @default("pending") // pending, success, failed
+  invoiceNumber     String?   @unique
+  planName          String    @default("Premium Membership")
+  gstAmount         Float     @default(0)
+  cgst              Float     @default(0)
+  sgst              Float     @default(0)
+  igst              Float     @default(0)
+  hsnCode           String?   @default("998319")
+  billingAddress    String?
+  gstinUsed         String?
+  paymentDate       DateTime?
+  expiryDate        DateTime?
+  createdAt         DateTime  @default(now())
+}
+
+model Referral {
+  id              String   @id @default(uuid())
+  referrerId      String
+  referrer        User     @relation("Referrer", fields: [referrerId], references: [id])
+  referredUserId  String   @unique
+  referredUser    User     @relation("ReferredUser", fields: [referredUserId], references: [id])
+  amount          Int      @default(50) // Bonus amount
+  status          String   @default("pending") // pending, paid
+  createdAt       DateTime @default(now())
+}
+
+model Category {
+  id            String         @id @default(uuid())
+  name          String
+  slug          String         @unique
+  subcategories Subcategory[]
+  ads           Ad[]
+  createdAt     DateTime       @default(now())
+}
+
+model Subcategory {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+  formFields  String   // JSON string storing dynamic form fields array
+  ads         Ad[]
+  createdAt   DateTime @default(now())
+}
+
+model Ad {
+  id            String      @id @default(uuid())
+  title         String
+  description   String
+  price         Float
+  images        String      // JSON string of image URLs
+  condition     String
+  location      String
+  status        String      @default("active") // active, pending, rejected, sold
+  userId        String
+  categoryId    String
+  subcategoryId String
+  dynamicData   String?     // JSON string storing the answered dynamic fields
+  includedItems String?     // JSON string storing array of included items
+  
+  category      Category    @relation(fields: [categoryId], references: [id])
+  subcategory   Subcategory @relation(fields: [subcategoryId], references: [id])
+  
+  videoUrl      String?
+  videoType     String?     @default("youtube")
+
+  createdAt     DateTime    @default(now())
+  expiresAt     DateTime
+  views         Int         @default(0)
+}
