@@ -97,6 +97,15 @@ const ListingDetail = () => {
   };
   const videoId = listing.videoUrl ? getYouTubeId(listing.videoUrl) : null;
 
+  const getMapEmbedUrl = (url?: string) => {
+    if (!url) return null;
+    const iframeMatch = url.match(/src="([^"]+)"/);
+    if (iframeMatch) return iframeMatch[1];
+    if (url.includes('google.com/maps/embed')) return url;
+    return `https://maps.google.com/maps?q=${encodeURIComponent(url)}&output=embed`;
+  };
+  const mapEmbedUrl = listing.mapUrl ? getMapEmbedUrl(listing.mapUrl) : null;
+
   const renderSmartPrice = () => {
     if (!listing.marketPrice || listing.marketPrice <= listing.price) return null;
 
@@ -291,6 +300,26 @@ const ListingDetail = () => {
                         title="YouTube video player"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         allowFullScreen
+                        className="absolute inset-0 w-full h-full border-0"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Map Embed */}
+                {mapEmbedUrl && (
+                  <div className="mb-8 p-1 border border-border rounded-xl bg-secondary/20">
+                    <div className="flex items-center gap-2 mb-3 px-3 pt-3">
+                      <MapPin className="h-5 w-5 text-emerald-600" />
+                      <h3 className="font-display font-semibold text-lg">Property Location</h3>
+                    </div>
+                    <div className="relative aspect-video rounded-lg overflow-hidden bg-black/5">
+                      <iframe
+                        src={mapEmbedUrl}
+                        title="Location Map"
+                        allowFullScreen
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
                         className="absolute inset-0 w-full h-full border-0"
                       />
                     </div>

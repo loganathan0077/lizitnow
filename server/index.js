@@ -306,7 +306,7 @@ app.post('/api/ads/post', authenticate, async (req, res) => {
 
         const {
             title, description, price, categoryId, subcategoryId,
-            condition, location, images, dynamicData, includedItems, videoUrl
+            condition, location, images, dynamicData, includedItems, videoUrl, mapUrl
         } = req.body;
 
         // Verify subcategory exists
@@ -332,6 +332,7 @@ app.post('/api/ads/post', authenticate, async (req, res) => {
                 dynamicData: dynamicData ? JSON.stringify(dynamicData) : null,
                 includedItems: includedItems ? JSON.stringify(includedItems) : null,
                 videoUrl,
+                mapUrl,
                 expiresAt,
                 status: 'active'
             }

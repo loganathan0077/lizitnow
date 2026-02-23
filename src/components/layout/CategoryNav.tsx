@@ -48,11 +48,6 @@ const CategoryNav = () => {
                                                 className="flex items-center justify-between px-4 py-3 text-sm font-medium text-foreground hover:text-primary hover:bg-primary/5 rounded-lg transition-colors group/item"
                                             >
                                                 <span className="truncate group-hover/item:translate-x-1 transition-transform">{sub.name}</span>
-                                                {sub._count?.ads ? (
-                                                    <span className="text-[11px] font-semibold text-muted-foreground group-hover/item:text-primary bg-secondary/50 group-hover/item:bg-primary/10 px-2 py-0.5 rounded-full transition-colors">
-                                                        {sub._count.ads}
-                                                    </span>
-                                                ) : null}
                                             </Link>
                                         ))}
                                     </div>

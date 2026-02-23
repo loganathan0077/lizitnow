@@ -65,11 +65,6 @@ export const MobileCategoryAccordion = ({ onClose }: { onClose: () => void }) =>
                                         className="flex items-center justify-between py-2.5 px-3 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-colors"
                                     >
                                         <span>{sub.name}</span>
-                                        {sub._count?.ads ? (
-                                            <span className="text-[10px] font-medium bg-secondary-foreground/10 text-secondary-foreground/70 px-2 py-0.5 rounded-full">
-                                                {sub._count.ads}
-                                            </span>
-                                        ) : null}
                                     </Link>
                                 ))}
                             </div>

@@ -102,10 +102,10 @@ model Ad {
   includedItems String?     // JSON string storing array of included items
   
   category      Category    @relation(fields: [categoryId], references: [id])
-  subcategory   Subcategory @relation(fields: [subcategoryId], references: [id])
-  
+  subcategory   Subcategory @relation(fields: [subcategoryId], references: [id]) // New video/map fields
   videoUrl      String?
   videoType     String?     @default("youtube")
+  mapUrl        String?
 
   createdAt     DateTime    @default(now())
   expiresAt     DateTime

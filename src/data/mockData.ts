@@ -21,7 +21,8 @@ export const categories: Category[] = [
   { id: '3', name: 'Furniture', icon: 'Sofa', slug: 'furniture', count: 943 },
   { id: '4', name: 'Home Appliances', icon: 'Refrigerator', slug: 'appliances', count: 1234 },
   { id: '5', name: 'Vehicles', icon: 'Car', slug: 'vehicles', count: 567 },
-  { id: '6', name: 'Real Estate', icon: 'MapPin', slug: 'real-estate', count: 342 },
+  { id: '6', name: 'Properties & Spaces', icon: 'MapPin', slug: 'real-estate', count: 342 },
+  { id: '7', name: 'Jobs & Careers', icon: 'Briefcase', slug: 'jobs', count: 890 },
 ];
 
 const mockSellerStats = {

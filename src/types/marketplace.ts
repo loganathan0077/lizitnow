@@ -60,6 +60,7 @@ export type Listing = {
   expiresAt: string;
   includedItems?: string[];
   videoUrl?: string;
+  mapUrl?: string; // Added mapUrl
   marketPrice?: number;
   views?: number;
   dynamicFields?: Record<string, string | number | boolean>;
