@@ -98,7 +98,7 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
 
       {/* Hover Dropdown Subcategories */}
       {category.subcategories && category.subcategories.length > 0 && (
-        <div className="absolute top-full left-0 mt-3 w-full bg-card/95 backdrop-blur-2xl border border-border rounded-xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 overflow-hidden transform origin-top scale-95 group-hover:scale-100">
+        <div className="absolute top-full left-0 mt-3 w-full bg-card/95 backdrop-blur-2xl border border-border rounded-xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-40 overflow-hidden transform origin-top scale-95 group-hover:scale-100">
           <div className="p-2 space-y-1 max-h-[300px] overflow-y-auto custom-scrollbar">
             {category.subcategories.map((sub: any) => (
               <Link
