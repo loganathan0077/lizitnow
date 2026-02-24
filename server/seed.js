@@ -307,6 +307,28 @@ async function main() {
         });
     }
 
+    // 13. Fashion & Lifestyle
+    const fashion = await prisma.category.upsert({
+        where: { slug: 'fashion-lifestyle' },
+        update: {},
+        create: { name: '👗 Fashion & Lifestyle', slug: 'fashion-lifestyle' }
+    });
+
+    const fashionSubcats = [
+        { name: 'Men\'s Clothing', slug: 'fashion-mens-clothing', formFields: JSON.stringify([{ name: 'Type', type: 'select', options: ['Shirts', 'T-Shirts', 'Trousers/Pants', 'Jeans', 'Kurtas/Ethnic', 'Winter Wear', 'Other'] }, { name: 'Size', type: 'select', options: ['S', 'M', 'L', 'XL', 'XXL', 'Other'] }, { name: 'Brand', type: 'text' }, { name: 'Condition', type: 'select', options: ['New with tags', 'New without tags', 'Used - Like New', 'Used - Good'] }]) },
+        { name: 'Women\'s Clothing', slug: 'fashion-womens-clothing', formFields: JSON.stringify([{ name: 'Type', type: 'select', options: ['Sarees', 'Kurtis/Suits', 'Tops/T-Shirts', 'Dresses', 'Jeans/Trousers', 'Lehengas', 'Winter Wear', 'Other'] }, { name: 'Size', type: 'select', options: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Free Size'] }, { name: 'Brand', type: 'text' }, { name: 'Condition', type: 'select', options: ['New with tags', 'New without tags', 'Used - Like New', 'Used - Good'] }]) },
+        { name: 'Men\'s Accessories', slug: 'fashion-mens-accessories', formFields: JSON.stringify([{ name: 'Type', type: 'select', options: ['Shoes', 'Watches', 'Sunglasses', 'Belts/Wallets', 'Bags', 'Jewellery', 'Other'] }, { name: 'Brand', type: 'text' }, { name: 'Condition', type: 'select', options: ['New', 'Used'] }]) },
+        { name: 'Women\'s Accessories', slug: 'fashion-womens-accessories', formFields: JSON.stringify([{ name: 'Type', type: 'select', options: ['Shoes/Footwear', 'Bags/Purses', 'Jewellery', 'Watches', 'Sunglasses', 'Other'] }, { name: 'Brand', type: 'text' }, { name: 'Condition', type: 'select', options: ['New', 'Used'] }]) }
+    ];
+
+    for (const sub of fashionSubcats) {
+        await prisma.subcategory.upsert({
+            where: { slug: sub.slug },
+            update: {},
+            create: { ...sub, categoryId: fashion.id }
+        });
+    }
+
     console.log('Seeding completed successfully!');
 }
 
