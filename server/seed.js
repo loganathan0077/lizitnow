@@ -161,6 +161,32 @@ async function main() {
         });
     }
 
+    // 7. Industrial Products
+    const industrial = await prisma.category.upsert({
+        where: { slug: 'industrial-products' },
+        update: {},
+        create: { name: 'Industrial Products', slug: 'industrial-products' }
+    });
+
+    const industrialSubcats = [
+        { name: 'Machinery & Equipment', slug: 'industrial-machinery', formFields: JSON.stringify([{ name: 'Type', type: 'text' }, { name: 'Condition', type: 'select', options: ['New', 'Used', 'Refurbished'] }, { name: 'Brand', type: 'text' }]) },
+        { name: 'Tools & Hardware', slug: 'industrial-tools', formFields: JSON.stringify([{ name: 'Type', type: 'text' }, { name: 'Condition', type: 'select', options: ['New', 'Used'] }, { name: 'Brand', type: 'text' }]) },
+        { name: 'Electrical Materials', slug: 'industrial-electrical', formFields: JSON.stringify([{ name: 'Type', type: 'text' }, { name: 'Condition', type: 'select', options: ['New', 'Used'] }]) },
+        { name: 'Safety Equipment', slug: 'industrial-safety', formFields: JSON.stringify([{ name: 'Type', type: 'text' }, { name: 'Condition', type: 'select', options: ['New', 'Used'] }]) },
+        { name: 'Construction Materials', slug: 'industrial-construction', formFields: JSON.stringify([{ name: 'Type', type: 'text' }, { name: 'Quantity Available', type: 'text' }]) },
+        { name: 'Generators & Motors', slug: 'industrial-generators', formFields: JSON.stringify([{ name: 'Type', type: 'select', options: ['Generator', 'Motor', 'Other'] }, { name: 'Capacity/Power', type: 'text' }, { name: 'Condition', type: 'select', options: ['New', 'Used', 'Refurbished'] }]) },
+        { name: 'Spare Parts', slug: 'industrial-spare-parts', formFields: JSON.stringify([{ name: 'Part Name', type: 'text' }, { name: 'Machine Compatibility', type: 'text' }, { name: 'Condition', type: 'select', options: ['New', 'Used', 'Refurbished'] }]) },
+        { name: 'Other Industrial Products', slug: 'industrial-other', formFields: JSON.stringify([{ name: 'Type', type: 'text' }, { name: 'Condition', type: 'select', options: ['New', 'Used'] }]) }
+    ];
+
+    for (const sub of industrialSubcats) {
+        await prisma.subcategory.upsert({
+            where: { slug: sub.slug },
+            update: {},
+            create: { ...sub, categoryId: industrial.id }
+        });
+    }
+
     console.log('Seeding completed successfully!');
 }
 
