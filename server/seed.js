@@ -209,6 +209,30 @@ async function main() {
         });
     }
 
+    // 9. Event Services & Organizers
+    const events = await prisma.category.upsert({
+        where: { slug: 'event-services' },
+        update: {},
+        create: { name: 'Event Services & Organizers', slug: 'event-services' }
+    });
+
+    const eventsSubcats = [
+        { name: 'Wedding Services', slug: 'events-wedding', formFields: JSON.stringify([{ name: 'Type of Service', type: 'select', options: ['Wedding Planners', 'Marriage Hall / Mandapam Booking', 'Wedding Decorators (Stage & Background)', 'Flower Decoration Services', 'Catering Services', 'Photography & Videography', 'Bridal Makeup Artists', 'Mehendi Artists', 'DJ & Sound System', 'Light & Stage Setup', 'Generator & Power Backup', 'Water Supply Services', 'Priest / Pandit Services', 'Invitation Card Designers', 'Wedding Car Rental', 'Event Security', 'Other'] }, { name: 'Experience (Years)', type: 'number' }]) },
+        { name: 'Birthday & Party Services', slug: 'events-birthday', formFields: JSON.stringify([{ name: 'Type of Service', type: 'select', options: ['Birthday Party Organizers', 'Balloon Decoration', 'Theme Decoration', 'Cake Suppliers', 'Party Catering', 'Magic Show / Kids Entertainment', 'DJ & Music', 'Photography', 'Other'] }]) },
+        { name: 'Corporate Events', slug: 'events-corporate', formFields: JSON.stringify([{ name: 'Type of Service', type: 'select', options: ['Corporate Event Planners', 'Conference Setup', 'Exhibition Stall Setup', 'Stage & LED Wall Setup', 'Sound & Lighting Services', 'Event Staff Supply', 'Other'] }]) },
+        { name: 'Funeral & Memorial Services', slug: 'events-funeral', formFields: JSON.stringify([{ name: 'Type of Service', type: 'select', options: ['Funeral Service Organizers', 'Cremation / Burial Arrangement', 'Priest Services', 'Floral Arrangements', 'Tent & Seating Setup', 'Water & Catering Services', 'Obituary Printing', 'Other'] }]) },
+        { name: 'Concerts & Tickets', slug: 'events-concerts', formFields: JSON.stringify([{ name: 'Event Type', type: 'select', options: ['Concert Tickets', 'Show Tickets', 'Cultural Event Tickets', 'Sports Event Tickets', 'Other'] }, { name: 'Date', type: 'text' }, { name: 'Venue', type: 'text' }]) },
+        { name: 'Party Equipment Rental', slug: 'events-rental', formFields: JSON.stringify([{ name: 'Equipment Type', type: 'select', options: ['Chairs & Tables Rental', 'Tent & Shamiana Rental', 'Stage Setup', 'Sound System Rental', 'Lighting Equipment', 'Generator Rental', 'Other'] }, { name: 'Rental Period', type: 'text' }]) }
+    ];
+
+    for (const sub of eventsSubcats) {
+        await prisma.subcategory.upsert({
+            where: { slug: sub.slug },
+            update: {},
+            create: { ...sub, categoryId: events.id }
+        });
+    }
+
     console.log('Seeding completed successfully!');
 }
 
