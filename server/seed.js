@@ -233,6 +233,33 @@ async function main() {
         });
     }
 
+    // 10. Services
+    const services = await prisma.category.upsert({
+        where: { slug: 'services' },
+        update: {},
+        create: { name: '🛠 Services', slug: 'services' }
+    });
+
+    const servicesSubcats = [
+        { name: 'Plumbing', slug: 'services-plumbing', formFields: JSON.stringify([{ name: 'Service Needed', type: 'text' }, { name: 'Urgency', type: 'select', options: ['Immediate', 'Within a few days', 'Flexible'] }]) },
+        { name: 'Electrical Work', slug: 'services-electrical', formFields: JSON.stringify([{ name: 'Service Needed', type: 'text' }, { name: 'Urgency', type: 'select', options: ['Immediate', 'Within a few days', 'Flexible'] }]) },
+        { name: 'AC Repair & Installation', slug: 'services-ac', formFields: JSON.stringify([{ name: 'Service Needed', type: 'select', options: ['Repair', 'Installation', 'Routine Service', 'Other'] }, { name: 'AC Type', type: 'select', options: ['Split AC', 'Window AC', 'Central AC', 'Other'] }]) },
+        { name: 'Painting Services', slug: 'services-painting', formFields: JSON.stringify([{ name: 'Type of Property', type: 'select', options: ['Residential', 'Commercial'] }, { name: 'Approx Area (sqft)', type: 'text' }]) },
+        { name: 'Cleaning Services', slug: 'services-cleaning', formFields: JSON.stringify([{ name: 'Service Type', type: 'select', options: ['Deep Cleaning', 'Regular Cleaning', 'Sofa/Carpet Cleaning', 'Other'] }]) },
+        { name: 'Carpenter Services', slug: 'services-carpenter', formFields: JSON.stringify([{ name: 'Service Needed', type: 'text' }, { name: 'Material Provided', type: 'select', options: ['Yes', 'No'] }]) },
+        { name: 'Pest Control', slug: 'services-pest', formFields: JSON.stringify([{ name: 'Target Pest', type: 'select', options: ['Termites', 'Cockroaches', 'Bed Bugs', 'Mosquitoes', 'General', 'Other'] }]) },
+        { name: 'CCTV Installation', slug: 'services-cctv', formFields: JSON.stringify([{ name: 'Service Needed', type: 'select', options: ['New Installation', 'Repair/Maintenance', 'Upgrades'] }, { name: 'Number of Cameras', type: 'number' }]) },
+        { name: 'Other Service', slug: 'services-other', formFields: JSON.stringify([{ name: 'Service Description', type: 'text' }]) }
+    ];
+
+    for (const sub of servicesSubcats) {
+        await prisma.subcategory.upsert({
+            where: { slug: sub.slug },
+            update: {},
+            create: { ...sub, categoryId: services.id }
+        });
+    }
+
     console.log('Seeding completed successfully!');
 }
 
