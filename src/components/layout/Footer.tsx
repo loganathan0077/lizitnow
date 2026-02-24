@@ -18,12 +18,13 @@ const Footer = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-primary-foreground flex items-center justify-center">
-                <span className="text-foreground font-display font-bold text-xl">L</span>
-              </div>
-              <span className="font-display text-xl font-bold">Liztitnow.com</span>
-            </div>
+            <Link to="/" className="flex items-center mb-4">
+              <img
+                src="/logo.png"
+                alt="Liztitnow.com Logo"
+                className="h-8 md:h-10 object-contain hover:opacity-90 transition-opacity"
+              />
+            </Link>
             <p className="text-primary-foreground/70 text-sm mb-6">
               India's most trusted marketplace for genuine buyers and sellers. No spam, no scams.
             </p>
@@ -78,31 +79,35 @@ const Footer = () => {
         </div>
 
         {/* Trust Indicators */}
-        <div className="mt-12 pt-8 border-t border-primary-foreground/10">
+        <div className="mt-12 pt-8 border-t border-border">
           <div className="flex flex-wrap justify-center gap-8 mb-8">
-            <div className="flex items-center gap-2 text-primary-foreground/70">
+            <div className="flex items-center gap-2 text-muted-foreground">
               <Shield className="h-5 w-5 text-trust-green" />
               <span className="text-sm">100% Secure Payments</span>
             </div>
-            <div className="flex items-center gap-2 text-primary-foreground/70">
+            <div className="flex items-center gap-2 text-muted-foreground">
               <Smartphone className="h-5 w-5 text-amber" />
               <span className="text-sm">Verified Sellers</span>
             </div>
-            <div className="flex items-center gap-2 text-primary-foreground/70">
+            <div className="flex items-center gap-2 text-muted-foreground">
               <Mail className="h-5 w-5 text-trust-premium" />
               <span className="text-sm">24/7 Support</span>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Bottom Bar */}
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-primary-foreground/50">
-            <div className="text-center md:text-left">
+      <div className="border-t border-border mt-auto">
+        <div className="container-tight py-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="text-center md:text-left text-muted-foreground text-sm">
               <p>© {currentYear} Liztitnow.com</p>
               <p>A product of Shermon Industries. All rights reserved.</p>
             </div>
-            <div className="flex gap-6">
-              <Link to="/privacy" className="hover:text-primary-foreground transition-colors">Privacy Policy</Link>
-              <Link to="/terms" className="hover:text-primary-foreground transition-colors">Terms of Service</Link>
+            <div className="flex gap-6 text-sm">
+              <Link to="/privacy" className="text-muted-foreground hover:text-primary transition-colors">Privacy Policy</Link>
+              <Link to="/terms" className="text-muted-foreground hover:text-primary transition-colors">Terms of Service</Link>
+              <Link to="/sitemap" className="text-muted-foreground hover:text-primary transition-colors">Sitemap</Link>
             </div>
           </div>
         </div>

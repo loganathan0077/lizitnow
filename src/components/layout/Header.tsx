@@ -79,16 +79,15 @@ const Header = () => {
   return (
     <header className="sticky top-0 z-50 flex flex-col w-full shadow-md">
       {/* Top Main Header */}
-      <div className="bg-primary text-primary-foreground relative z-20">
+      <div className="bg-background text-foreground border-b border-border/40 relative z-20">
         <div className="container-tight h-16 md:h-[72px] flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center group-hover:bg-primary-foreground/30 transition-colors">
-              <span className="text-primary-foreground font-display font-bold text-xl">L</span>
-            </div>
-            <span className="font-display text-xl font-bold text-primary-foreground hidden sm:block tracking-wide">
-              Liztitnow.com
-            </span>
+          <Link to="/" className="flex items-center group">
+            <img
+              src="/logo.png"
+              alt="Liztitnow.com Logo"
+              className="h-9 md:h-11 object-contain hover:opacity-90 transition-opacity drop-shadow-sm"
+            />
           </Link>
 
           {/* Search Bar - Desktop */}
@@ -133,41 +132,53 @@ const Header = () => {
             )}
           </div>
 
-          {/* Right Actions */}
-          <div className="flex items-center gap-4 md:gap-6">
-            {/* Post Ad Button */}
-            <Button variant="outline" size="sm" className="hidden sm:flex bg-primary-foreground/10 text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground hover:text-primary transition-colors h-9" asChild>
-              <Link to="/post-ad">
-                <Plus className="h-4 w-4 mr-1" />
-                <span className="font-semibold">Post Ad</span>
-              </Link>
+          {/* Action Icons */}
+          <div className="flex items-center gap-1 sm:gap-3 ml-4">
+            {/* Desktop Auth */}
+            <div className="hidden md:flex items-center gap-3 mr-2">
+              {isAuthenticated ? (
+                <Link to="/dashboard">
+                  <Button variant="ghost" className="hidden lg:flex items-center gap-2 hover:bg-secondary">
+                    <User className="h-4 w-4" />
+                    <span className="font-medium">My Account</span>
+                    {isVerified && <BadgeCheck className="h-4 w-4 text-trust-blue ml-1" />}
+                  </Button>
+                </Link>
+              ) : (
+                <Link to="/login">
+                  <Button variant="ghost" className="font-medium hover:bg-secondary group hidden sm:flex">
+                    <LogIn className="h-4 w-4 mr-2 group-hover:text-primary transition-colors" />
+                    Sign In
+                  </Button>
+                </Link>
+              )}
+            </div>
+
+            {/* Mobile Search Toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden hover:bg-secondary text-foreground"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Search className="h-5 w-5" />
             </Button>
 
-            {/* User Menu */}
-            {isAuthenticated ? (
-              <div className="flex items-center gap-5">
-                <button className="relative text-primary-foreground/90 hover:text-primary-foreground transition-colors group">
-                  <Bell className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                  <span className="absolute -top-1 -right-1.5 w-2 h-2 bg-destructive rounded-full border border-primary" />
-                </button>
-                <Link to="/dashboard" className="flex items-center gap-2 group">
-                  <div className="w-8 h-8 rounded-full bg-primary-foreground/20 flex items-center justify-center relative group-hover:bg-primary-foreground/30 transition-colors">
-                    <User className="h-4 w-4 text-primary-foreground" />
-                    {isVerified && (
-                      <BadgeCheck className="absolute -bottom-1 -right-1 h-[14px] w-[14px] text-blue-500 bg-card rounded-full" />
-                    )}
-                  </div>
-                  <span className="text-sm font-medium text-primary-foreground hidden lg:block group-hover:text-primary-foreground/80">Account</span>
-                </Link>
-              </div>
-            ) : (
-              <Button variant="ghost" className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground hidden sm:flex font-semibold" asChild>
-                <Link to="/login">
-                  <User className="h-4 w-4 mr-2" />
-                  Login
-                </Link>
+            {/* Notifications */}
+            {isAuthenticated && (
+              <Button variant="ghost" size="icon" className="relative hover:bg-secondary text-foreground">
+                <Bell className="h-5 w-5" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full border-2 border-background"></span>
               </Button>
             )}
+
+            {/* Post Ad Button */}
+            <Link to="/post-ad" className="hidden xs:block">
+              <Button className="font-medium shadow-sm hover:shadow-md transition-all gap-2 rounded-full px-5 bg-gradient-to-r from-primary to-olive hover:from-primary/90 hover:to-olive/90 text-white border-0">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Post Ad</span>
+              </Button>
+            </Link>
 
             {/* Mobile Menu Toggle */}
             <button

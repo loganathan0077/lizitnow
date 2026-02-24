@@ -358,7 +358,11 @@ app.post('/api/ads/post', authenticate, async (req, res) => {
 // Create Razorpay Order
 app.post('/api/payment/create-order', authenticate, async (req, res) => {
     try {
-        const amount = 100 * 100; // ₹100 in paise
+        const reqAmount = req.body.amount || 20;
+        if (reqAmount < 20) {
+            return res.status(400).json({ error: 'Minimum recharge amount is ₹20.' });
+        }
+        const amount = reqAmount * 100; // in paise
 
         const options = {
             amount,
@@ -379,8 +383,9 @@ app.post('/api/payment/create-order', authenticate, async (req, res) => {
             data: {
                 userId: req.user.userId,
                 razorpayOrderId: order.id,
-                amount: 100,
-                status: 'pending'
+                amount: reqAmount,
+                status: 'pending',
+                planName: 'Wallet Recharge'
             }
         });
 
@@ -422,8 +427,6 @@ app.post('/api/payment/verify', authenticate, async (req, res) => {
 
         // Payment is successful! Update payment status
         const paymentDate = new Date();
-        const expiryDate = new Date();
-        expiryDate.setMonth(expiryDate.getMonth() + 6); // 6 Months membership
 
         // Generate Invoice Number
         const count = await prisma.payment.count({ where: { status: 'success' } });
@@ -446,9 +449,8 @@ app.post('/api/payment/verify', authenticate, async (req, res) => {
                 status: 'success',
                 razorpayPaymentId: razorpay_payment_id,
                 paymentDate,
-                expiryDate,
                 invoiceNumber,
-                planName: '6 Months Membership',
+                planName: 'Wallet Recharge',
                 gstAmount,
                 cgst,
                 sgst,
@@ -457,40 +459,17 @@ app.post('/api/payment/verify', authenticate, async (req, res) => {
             }
         });
 
-        // Update User's Membership
-        const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
-
-        // Extend expiry if already active, otherwise set from today
-        let newExpiry = new Date();
-        if (user.membershipExpiry && user.membershipExpiry > new Date()) {
-            newExpiry = new Date(user.membershipExpiry);
-        }
-        newExpiry.setMonth(newExpiry.getMonth() + 6);
-
-        await prisma.user.update({
-            where: { id: user.id },
-            data: { membershipExpiry: newExpiry }
+        // Add funds to user's wallet
+        const updatedUser = await prisma.user.update({
+            where: { id: req.user.userId },
+            data: {
+                walletBalance: {
+                    increment: totalAmount
+                }
+            }
         });
 
-        // Handle Referral Bonus (₹50 to referrer)
-        const referral = await prisma.referral.findUnique({
-            where: { referredUserId: user.id }
-        });
-
-        if (referral && referral.status === 'pending') {
-            await prisma.$transaction([
-                prisma.referral.update({
-                    where: { id: referral.id },
-                    data: { status: 'paid' }
-                }),
-                prisma.user.update({
-                    where: { id: referral.referrerId },
-                    data: { walletBalance: { increment: 50 } }
-                })
-            ]);
-        }
-
-        res.json({ message: 'Payment verified successfully. Membership activated!', expiryDate: newExpiry });
+        res.json({ message: 'Wallet recharged successfully!', walletBalance: updatedUser.walletBalance });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal server error' });

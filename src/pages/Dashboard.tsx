@@ -119,6 +119,10 @@ const Dashboard = () => {
 
   const [billingHistory, setBillingHistory] = useState<any[]>([]);
 
+  // Recharge Modal State
+  const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
+  const [rechargeAmount, setRechargeAmount] = useState<number | ''>(50);
+
   useEffect(() => {
     if (isBillingView && user) {
       const fetchBilling = async () => {
@@ -190,21 +194,30 @@ const Dashboard = () => {
     });
   };
 
-  const handleBuyMembership = async () => {
+  const handleRechargeSubmit = async () => {
+    if (!rechargeAmount || rechargeAmount < 20) {
+      toast.error('Minimum recharge amount is ₹20');
+      return;
+    }
     try {
       const token = localStorage.getItem('token');
       const res = await fetch('http://localhost:5001/api/payment/create-order', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ amount: Number(rechargeAmount) })
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create order');
 
       const options = {
         key: 'rzp_test_mock_key',
         amount: data.amount,
         currency: data.currency,
         name: 'Liztitnow.com',
-        description: '6 Months Membership',
+        description: 'Wallet Recharge',
         order_id: data.orderId,
         handler: async function (response: any) {
           const verifyRes = await fetch('http://localhost:5001/api/payment/verify', {
@@ -216,9 +229,11 @@ const Dashboard = () => {
               razorpay_signature: response.razorpay_signature || 'mock_signature'
             })
           });
+          const verifyData = await verifyRes.json();
           if (verifyRes.ok) {
-            toast.success('Membership Activated!');
-            window.location.reload();
+            toast.success('Wallet Recharged Successfully!');
+            setIsRechargeModalOpen(false);
+            setUser((prev: any) => ({ ...prev, walletBalance: verifyData.walletBalance }));
           } else {
             toast.error('Payment verification failed');
           }
@@ -226,8 +241,8 @@ const Dashboard = () => {
       };
       const rzp = new (window as any).Razorpay(options);
       rzp.open();
-    } catch (err) {
-      toast.error('Failed to initiate payment');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to initiate payment');
     }
   };
 
@@ -341,60 +356,52 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                {/* Membership Status */}
-                <div className="p-4 rounded-xl bg-primary/10 mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-primary">Membership</span>
-                    {isMember ? <Star className="h-5 w-5 text-trust-green fill-trust-green" /> : <Star className="h-5 w-5 text-muted-foreground" />}
-                  </div>
-                  <div className="font-display font-bold text-foreground">
-                    {isMember ? 'Active' : 'Expired / Free'}
-                  </div>
-                  {isMember ? (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Valid until {new Date(user.membershipExpiry).toLocaleDateString()}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-destructive mt-1">
-                      Buy membership to post ads
-                    </p>
-                  )}
-                </div>
-
-                {/* Wallet Balance */}
-                <div className="p-4 rounded-xl bg-amber/10 mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">Wallet Balance</span>
+                {/* Wallet Section */}
+                <div className="p-4 rounded-xl bg-amber/10 mb-4 border border-amber/20">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-amber-dark">Wallet Balance</span>
                     <Coins className="h-5 w-5 text-amber" />
                   </div>
-                  <div className="text-2xl font-display font-bold text-foreground">
+                  <div className="text-3xl font-display font-bold text-foreground mb-1">
                     ₹{user.walletBalance}
                   </div>
-                  <p className="text-xs text-amber-dark mt-1">
-                    Earn ₹50 per referral checkout!
-                  </p>
+                  <div className="text-xs text-muted-foreground mb-4 font-medium">
+                    Minimum recharge ₹20
+                  </div>
+                  <Button variant="outline" className="w-full bg-background hover:bg-amber text-amber-dark hover:text-amber-950 transition-colors" onClick={() => setIsRechargeModalOpen(true)}>
+                    Recharge Wallet
+                  </Button>
                 </div>
 
-                {/* Referral Code */}
-                <div className="p-4 rounded-xl border border-border mb-4">
-                  <div className="text-sm text-muted-foreground mb-1">Your Referral Code</div>
-                  <div className="flex items-center justify-between bg-secondary rounded-lg p-2">
-                    <span className="font-mono font-bold tracking-wider">{user.referralCode}</span>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
-                      navigator.clipboard.writeText(user.referralCode);
-                      toast.success('Referral code copied!');
-                    }}>
-                      <Copy className="h-4 w-4" />
-                    </Button>
+                {/* Posting Info Section */}
+                <div className="p-4 rounded-xl border border-border bg-card mb-4 shadow-sm">
+                  <h4 className="font-semibold text-sm mb-4 text-foreground flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Posting Status
+                  </h4>
+
+                  {/* Free Ads */}
+                  <div className="mb-5">
+                    <div className="flex justify-between text-sm mb-1.5">
+                      <span className="text-muted-foreground font-medium">Free Ads Remaining</span>
+                      <span className="font-bold text-trust-green">2 / 2</span>
+                    </div>
+                    <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+                      <div className="bg-trust-green h-2 rounded-full" style={{ width: '0%' }}></div>
+                    </div>
+                  </div>
+
+                  {/* Paid Ads */}
+                  <div>
+                    <div className="flex justify-between text-sm mb-1.5 gap-2">
+                      <span className="text-muted-foreground font-medium truncate">Paid Ads Used <span className="text-xs">(₹1 offer)</span></span>
+                      <span className="font-bold text-primary shrink-0">0 / 30</span>
+                    </div>
+                    <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+                      <div className="bg-primary h-2 rounded-full" style={{ width: '0%' }}></div>
+                    </div>
                   </div>
                 </div>
-
-                {!isMember && (
-                  <Button variant="accent" className="w-full gap-2" onClick={handleBuyMembership}>
-                    <CreditCard className="h-4 w-4" />
-                    Buy Membership (₹100)
-                  </Button>
-                )}
               </div>
 
               {/* Navigation */}
@@ -549,9 +556,12 @@ const Dashboard = () => {
                     </div>
 
                     <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                      Share your referral code <strong>{user.referralCode}</strong> with friends.
-                      You earn ₹50 when they buy their first 6-month membership!
+                      Recharge your wallet to take advantage of our Launch Offer.
+                      Post up to 30 ads at just ₹1 per ad! Minimum recharge is ₹20.
                     </p>
+                    <Button variant="accent" size="lg" className="min-w-[200px]" onClick={() => setIsRechargeModalOpen(true)}>
+                      Recharge Wallet
+                    </Button>
                   </div>
 
                   <div className="card-premium">
@@ -897,6 +907,66 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
+
+      {/* Recharge Wallet Modal */}
+      {isRechargeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="bg-card w-full max-w-md rounded-2xl shadow-xl border border-border p-6 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-display font-bold text-foreground">Recharge Wallet</h2>
+              <Button variant="ghost" size="icon" onClick={() => setIsRechargeModalOpen(false)}>
+                <XCircle className="h-6 w-6" />
+              </Button>
+            </div>
+
+            <p className="text-muted-foreground mb-6">
+              Add funds to your wallet to post ads at just ₹1 per ad!
+            </p>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="amount">Recharge Amount (₹)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+                  <Input
+                    id="amount"
+                    type="number"
+                    min="20"
+                    className="pl-8 text-lg font-bold"
+                    value={rechargeAmount}
+                    onChange={(e) => setRechargeAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                  />
+                </div>
+                {rechargeAmount !== '' && rechargeAmount < 20 && (
+                  <p className="text-xs text-destructive mt-1">Minimum recharge amount is ₹20.</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 py-2">
+                {[20, 50, 100].map(amt => (
+                  <Button
+                    key={amt}
+                    type="button"
+                    variant={rechargeAmount === amt ? 'accent' : 'outline'}
+                    onClick={() => setRechargeAmount(amt)}
+                  >
+                    ₹{amt}
+                  </Button>
+                ))}
+              </div>
+
+              <Button
+                variant="accent"
+                className="w-full mt-2 text-lg h-12"
+                onClick={handleRechargeSubmit}
+                disabled={rechargeAmount === '' || rechargeAmount < 20}
+              >
+                Proceed to Pay {rechargeAmount ? `₹${rechargeAmount}` : ''}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

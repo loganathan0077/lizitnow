@@ -15,16 +15,16 @@ const TokenCTA = () => {
             <div className="text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 text-primary-foreground text-sm font-medium mb-4">
                 <Coins className="h-4 w-4" />
-                <span>Free Ads & Membership</span>
+                <span>Launch Offer Plan</span>
               </div>
               <h2 className="font-display text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
-                Start Selling Today!
+                30 Ads @ <span className="text-amber">₹1 per ad</span>
               </h2>
               <p className="text-lg text-primary-foreground/80 max-w-xl mb-2">
-                New users can post <span className="font-semibold text-amber">5 ads completely free!</span>
+                <span className="font-semibold text-white">Minimum Wallet Recharge: ₹20</span>
               </p>
               <p className="text-primary-foreground/60">
-                After 5 free ads, unlock unlimited posting for 6 months with a ₹100 membership.
+                Pay as you post • Limited-time launch offer
               </p>
             </div>
 
@@ -35,8 +35,9 @@ const TokenCTA = () => {
                 className="min-w-[180px]"
                 asChild
               >
-                <Link to="/signup">
-                  Get Started Free
+                <Link to="/post-ad">
+                  Get Started
+
                   <ArrowRight className="h-5 w-5" />
                 </Link>
               </Button>
