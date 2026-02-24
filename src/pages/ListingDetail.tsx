@@ -228,9 +228,16 @@ const ListingDetail = () => {
 
               {/* Product Details */}
               <div className="card-premium p-6">
-                <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground mb-4">
-                  {listing.title}
-                </h1>
+                <div className="flex flex-wrap items-center gap-3 mb-4">
+                  <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
+                    {listing.title}
+                  </h1>
+                  {listing.isB2B && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider shadow-sm mt-1 mb-1">
+                      B2B / Wholesale
+                    </span>
+                  )}
+                </div>
 
                 {/* Quick Info Badges */}
                 <div className="flex flex-wrap items-center gap-2 mb-6">
@@ -269,6 +276,49 @@ const ListingDetail = () => {
                         </li>
                       ))}
                     </ul>
+                  </div>
+                )}
+
+                {/* B2B Wholesale Details Section */}
+                {listing.isB2B && (
+                  <div className="mb-8 p-5 border border-primary/20 bg-primary/5 rounded-xl">
+                    <h3 className="font-display font-semibold text-lg text-primary mb-4 flex items-center gap-2">
+                      📦 Wholesale Deal Information
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                      <div className="bg-background p-3 rounded-lg border border-border">
+                        <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Min. Order (MOQ)</div>
+                        <div className="font-bold text-sm text-foreground">{listing.b2bMoq} Units</div>
+                      </div>
+                      <div className="bg-background p-3 rounded-lg border border-border">
+                        <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Price Per Unit</div>
+                        <div className="font-bold text-sm text-foreground">{formatPrice(listing.b2bPricePerUnit || 0)}</div>
+                      </div>
+                      {listing.b2bStock ? (
+                        <div className="bg-background p-3 rounded-lg border border-border">
+                          <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Available Stock</div>
+                          <div className="font-bold text-sm text-foreground">{listing.b2bStock} Units</div>
+                        </div>
+                      ) : null}
+                      {listing.b2bBusinessName ? (
+                        <div className="bg-background p-3 rounded-lg border border-border">
+                          <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Business Name</div>
+                          <div className="font-bold text-sm text-foreground truncate">{listing.b2bBusinessName}</div>
+                        </div>
+                      ) : null}
+                      {listing.b2bGstNumber ? (
+                        <div className="bg-background p-3 rounded-lg border border-border">
+                          <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">GST Number</div>
+                          <div className="font-bold text-sm text-foreground">{listing.b2bGstNumber}</div>
+                        </div>
+                      ) : null}
+                      {listing.b2bDelivery !== null && listing.b2bDelivery !== undefined ? (
+                        <div className="bg-background p-3 rounded-lg border border-border">
+                          <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Delivery</div>
+                          <div className="font-bold text-sm text-foreground">{listing.b2bDelivery ? 'Available' : 'Pickup Only'}</div>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 )}
 
@@ -339,9 +389,16 @@ const ListingDetail = () => {
             <div className="space-y-6">
               {/* Price Card */}
               <div className="card-premium p-6 sticky top-24">
-                <div className="text-3xl font-display font-bold text-foreground mb-4">
-                  {formatPrice(listing.price)}
+                <div className="text-3xl font-display font-bold text-foreground mb-1">
+                  {listing.isB2B ? formatPrice(listing.b2bPricePerUnit || 0) : formatPrice(listing.price)}
                 </div>
+                {listing.isB2B ? (
+                  <div className="text-sm font-medium text-muted-foreground mb-6">
+                    Price Per Unit • Minimum Order: <span className="text-foreground">{listing.b2bMoq} Units</span>
+                  </div>
+                ) : (
+                  <div className="mb-6"></div>
+                )}
 
                 {/* Action Buttons: FIXED ALIGNMENT */}
                 <div className="hidden lg:flex items-center gap-3 mb-6">

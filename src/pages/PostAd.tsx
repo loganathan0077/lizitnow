@@ -113,7 +113,14 @@ const PostAd = () => {
         location: 'Mumbai, India', // Default for now
         condition: 'new',
         videoUrl: '',
-        mapUrl: ''
+        mapUrl: '',
+        isB2B: false,
+        b2bMoq: '',
+        b2bPricePerUnit: '',
+        b2bStock: '',
+        b2bBusinessName: '',
+        b2bGstNumber: '',
+        b2bDelivery: false
     });
 
     const [dynamicFields, setDynamicFields] = useState<Record<string, string | number>>({});
@@ -170,8 +177,13 @@ const PostAd = () => {
     }, []);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        const { name, value, type } = e.target;
+        if (type === 'checkbox') {
+            const checked = (e.target as HTMLInputElement).checked;
+            setFormData(prev => ({ ...prev, [name]: checked }));
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+        }
     };
 
     const isValidYouTubeUrl = (url: string) => {
@@ -200,7 +212,7 @@ const PostAd = () => {
         try {
             const payload = {
                 ...formData,
-                price: Number(formData.price), // Ensure price is a number
+                price: formData.isB2B ? 0 : Number(formData.price), // Fallback price for B2B since they use price per unit
                 images: ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop'], // Hardcoded for now
                 dynamicData: Object.keys(dynamicFields).length > 0 ? dynamicFields : undefined,
                 includedItems: includedItems.trim() ? includedItems.split(',').map(i => i.trim()) : undefined,
@@ -408,18 +420,130 @@ const PostAd = () => {
                                                     />
                                                 </div>
 
+                                                {/* Sale Type Toggle */}
                                                 {!isJobCategory && (
+                                                    <div className="pt-4 border-t border-border">
+                                                        <label className="block text-sm font-medium text-foreground mb-3">Sale Type</label>
+                                                        <div className="flex gap-4">
+                                                            <label className={`cursor-pointer flex-1 p-3 rounded-xl border-2 transition-all text-center font-medium ${!formData.isB2B ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}>
+                                                                <input
+                                                                    type="radio"
+                                                                    name="saleType"
+                                                                    className="hidden"
+                                                                    checked={!formData.isB2B}
+                                                                    onChange={() => setFormData(prev => ({ ...prev, isB2B: false }))}
+                                                                />
+                                                                Retail Sale
+                                                            </label>
+                                                            <label className={`cursor-pointer flex-1 p-3 rounded-xl border-2 transition-all text-center font-medium ${formData.isB2B ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}>
+                                                                <input
+                                                                    type="radio"
+                                                                    name="saleType"
+                                                                    className="hidden"
+                                                                    checked={formData.isB2B}
+                                                                    onChange={() => setFormData(prev => ({ ...prev, isB2B: true }))}
+                                                                />
+                                                                B2B / Wholesale
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {!isJobCategory && !formData.isB2B && (
                                                     <div>
                                                         <label className="block text-sm font-medium text-foreground mb-2">Price (₹)</label>
                                                         <input
                                                             type="number"
                                                             name="price"
-                                                            required={!isJobCategory}
+                                                            required={!formData.isB2B}
                                                             value={formData.price}
                                                             onChange={handleInputChange}
                                                             placeholder="e.g. 85000"
                                                             className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                                                         />
+                                                    </div>
+                                                )}
+
+                                                {/* B2B Dynamic Fields */}
+                                                {!isJobCategory && formData.isB2B && (
+                                                    <div className="bg-primary/5 p-5 rounded-xl border border-primary/20 space-y-4">
+                                                        <h3 className="font-semibold text-primary mb-2 flex items-center gap-2">
+                                                            📦 Wholesale Specific Requirements
+                                                        </h3>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-foreground mb-2">Minimum Order Quantity (MOQ) *</label>
+                                                                <input
+                                                                    type="number"
+                                                                    name="b2bMoq"
+                                                                    required
+                                                                    min="2"
+                                                                    value={formData.b2bMoq}
+                                                                    onChange={handleInputChange}
+                                                                    placeholder="e.g. 50"
+                                                                    className="w-full h-12 px-4 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-foreground mb-2">Price Per Unit (₹) *</label>
+                                                                <input
+                                                                    type="number"
+                                                                    name="b2bPricePerUnit"
+                                                                    required
+                                                                    min="1"
+                                                                    value={formData.b2bPricePerUnit}
+                                                                    onChange={handleInputChange}
+                                                                    placeholder="e.g. 450"
+                                                                    className="w-full h-12 px-4 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-foreground mb-2">Available Stock (Optional)</label>
+                                                                <input
+                                                                    type="number"
+                                                                    name="b2bStock"
+                                                                    value={formData.b2bStock}
+                                                                    onChange={handleInputChange}
+                                                                    placeholder="e.g. 5000"
+                                                                    className="w-full h-12 px-4 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-foreground mb-2">Business Name (Optional)</label>
+                                                                <input
+                                                                    type="text"
+                                                                    name="b2bBusinessName"
+                                                                    value={formData.b2bBusinessName}
+                                                                    onChange={handleInputChange}
+                                                                    placeholder="Your Company Pvt Ltd"
+                                                                    className="w-full h-12 px-4 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-foreground mb-2">GST Number (Optional)</label>
+                                                                <input
+                                                                    type="text"
+                                                                    name="b2bGstNumber"
+                                                                    value={formData.b2bGstNumber}
+                                                                    onChange={handleInputChange}
+                                                                    placeholder="22AAAAA0000A1Z5"
+                                                                    className="w-full h-12 px-4 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                                                />
+                                                            </div>
+                                                            <div className="flex items-center gap-3 pt-8">
+                                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        name="b2bDelivery"
+                                                                        className="sr-only peer"
+                                                                        checked={formData.b2bDelivery}
+                                                                        onChange={handleInputChange}
+                                                                    />
+                                                                    <div className="w-11 h-6 bg-secondary peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                                                    <span className="ml-3 text-sm font-medium text-foreground">Delivery Available</span>
+                                                                </label>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 )}
                                             </>

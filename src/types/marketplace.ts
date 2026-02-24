@@ -64,6 +64,13 @@ export type Listing = {
   marketPrice?: number;
   views?: number;
   dynamicFields?: Record<string, string | number | boolean>;
+  isB2B?: boolean;
+  b2bMoq?: number;
+  b2bPricePerUnit?: number;
+  b2bStock?: number;
+  b2bBusinessName?: string;
+  b2bGstNumber?: string;
+  b2bDelivery?: boolean;
 };
 
 export type User = {

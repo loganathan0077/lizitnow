@@ -306,12 +306,19 @@ app.post('/api/ads/post', authenticate, async (req, res) => {
 
         const {
             title, description, price, categoryId, subcategoryId,
-            condition, location, images, dynamicData, includedItems, videoUrl, mapUrl
+            condition, location, images, dynamicData, includedItems, videoUrl, mapUrl,
+            isB2B, b2bMoq, b2bPricePerUnit, b2bStock, b2bBusinessName, b2bGstNumber, b2bDelivery
         } = req.body;
 
         // Verify subcategory exists
         const subcategory = await prisma.subcategory.findUnique({ where: { id: subcategoryId } });
         if (!subcategory) return res.status(400).json({ error: 'Invalid subcategory' });
+
+        // Basic B2B Validation
+        if (isB2B) {
+            if (!b2bMoq || isNaN(parseInt(b2bMoq))) return res.status(400).json({ error: 'Minimum Order Quantity (MOQ) is required for B2B' });
+            if (!b2bPricePerUnit || isNaN(parseFloat(b2bPricePerUnit))) return res.status(400).json({ error: 'Price Per Unit is required for B2B' });
+        }
 
         const now = new Date();
         const expiresAt = new Date();
@@ -322,7 +329,7 @@ app.post('/api/ads/post', authenticate, async (req, res) => {
             data: {
                 title,
                 description,
-                price: parseFloat(price),
+                price: parseFloat(price) || 0,
                 categoryId,
                 subcategoryId,
                 userId: user.id,
@@ -333,6 +340,13 @@ app.post('/api/ads/post', authenticate, async (req, res) => {
                 includedItems: includedItems ? JSON.stringify(includedItems) : null,
                 videoUrl,
                 mapUrl,
+                isB2B: !!isB2B,
+                b2bMoq: isB2B ? parseInt(b2bMoq) : null,
+                b2bPricePerUnit: isB2B ? parseFloat(b2bPricePerUnit) : null,
+                b2bStock: isB2B && b2bStock ? parseInt(b2bStock) : null,
+                b2bBusinessName: isB2B ? b2bBusinessName : null,
+                b2bGstNumber: isB2B ? b2bGstNumber : null,
+                b2bDelivery: isB2B ? !!b2bDelivery : null,
                 expiresAt,
                 status: 'active'
             }

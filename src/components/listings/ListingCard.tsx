@@ -27,7 +27,7 @@ const ListingCard = ({ listing, featured }: ListingCardProps) => {
     const date = new Date(dateStr);
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays} days ago`;
@@ -36,7 +36,7 @@ const ListingCard = ({ listing, featured }: ListingCardProps) => {
   };
 
   return (
-    <Link 
+    <Link
       to={`/listing/${listing.id}`}
       className={cn(
         "group card-premium overflow-hidden flex flex-col",
@@ -50,7 +50,7 @@ const ListingCard = ({ listing, featured }: ListingCardProps) => {
           alt={listing.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
-        
+
         {/* Featured Badge */}
         {featured && (
           <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-amber text-accent-foreground text-xs font-semibold">
@@ -70,15 +70,25 @@ const ListingCard = ({ listing, featured }: ListingCardProps) => {
       {/* Content */}
       <div className="flex flex-col flex-1 p-4">
         {/* Price */}
-        <div className="mb-2">
+        <div className="mb-2 flex items-end gap-1.5 flex-wrap">
           <span className="text-xl font-display font-bold text-foreground">
-            {formatPrice(listing.price)}
+            {listing.isB2B ? formatPrice(listing.b2bPricePerUnit || 0) : formatPrice(listing.price)}
           </span>
+          {listing.isB2B && (
+            <span className="text-xs text-muted-foreground pb-1 font-medium whitespace-nowrap">
+              / unit (Min: {listing.b2bMoq})
+            </span>
+          )}
         </div>
 
         {/* Title */}
         <h3 className="font-semibold text-foreground line-clamp-2 mb-3 group-hover:text-primary transition-colors">
-          {listing.title}
+          {listing.isB2B && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary uppercase tracking-wider mr-2 align-middle border border-primary/20">
+              B2B
+            </span>
+          )}
+          <span className="align-middle">{listing.title}</span>
         </h3>
 
         {/* Meta Info */}

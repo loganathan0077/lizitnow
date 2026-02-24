@@ -110,4 +110,13 @@ model Ad {
   createdAt     DateTime    @default(now())
   expiresAt     DateTime
   views         Int         @default(0)
+
+  // B2B Wholesale Fields
+  isB2B            Boolean   @default(false)
+  b2bMoq           Int?
+  b2bPricePerUnit  Float?
+  b2bStock         Int?
+  b2bBusinessName  String?
+  b2bGstNumber     String?
+  b2bDelivery      Boolean?
 }

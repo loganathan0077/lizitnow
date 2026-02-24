@@ -102,6 +102,30 @@ const sellers: Seller[] = [
 
 export const listings: Listing[] = [
   {
+    id: 'b2b-iphone-bulk',
+    title: 'Wholesale Apple iPhone 14 Pro Max Bulk (Lot of 50)',
+    description: 'Selling a bulk lot of 50 Apple iPhone 14 Pro Max units. These are sealed, brand new components perfect for electronics retailers. Bulk buyers only.',
+    price: 0,
+    isB2B: true,
+    b2bMoq: 10,
+    b2bPricePerUnit: 85000,
+    b2bStock: 250,
+    b2bBusinessName: 'Tech Wholesale Inc.',
+    b2bGstNumber: '33AAAAA1234A1Z5',
+    b2bDelivery: true,
+    images: [
+      'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop',
+    ],
+    category: 'electronics',
+    condition: 'new',
+    location: 'Mumbai, Maharashtra',
+    seller: sellers[0],
+    createdAt: new Date().toISOString(),
+    status: 'active',
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    featured: true,
+  },
+  {
     id: '1',
     title: 'iPhone 14 Pro Max - 256GB Deep Purple',
     description: 'Excellent condition, 11 months old. With original box, charger, and unused earphones. Battery health 96%.',
