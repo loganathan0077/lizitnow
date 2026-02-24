@@ -260,6 +260,30 @@ async function main() {
         });
     }
 
+    // 11. Books & Education
+    const booksAndEducation = await prisma.category.upsert({
+        where: { slug: 'books-education' },
+        update: {},
+        create: { name: '📚 Books & Education', slug: 'books-education' }
+    });
+
+    const booksSubcats = [
+        { name: 'School Materials', slug: 'education-school', formFields: JSON.stringify([{ name: 'Type', type: 'select', options: ['Textbooks', 'Notebooks', 'Stationery', 'Uniforms', 'Other'] }, { name: 'Class/Grade', type: 'text' }, { name: 'Condition', type: 'select', options: ['New', 'Used'] }]) },
+        { name: 'Competitive Exam Books', slug: 'education-competitive', formFields: JSON.stringify([{ name: 'Exam Type', type: 'text', placeholder: 'e.g. UPSC, JEE, NEET, Bank PO' }, { name: 'Condition', type: 'select', options: ['New', 'Used'] }]) },
+        { name: 'Guides & Workbooks', slug: 'education-guides', formFields: JSON.stringify([{ name: 'Subject/Topic', type: 'text' }, { name: 'Condition', type: 'select', options: ['New', 'Used'] }]) },
+        { name: 'College Materials', slug: 'education-college', formFields: JSON.stringify([{ name: 'Degree/Course', type: 'text', placeholder: 'e.g. B.Tech, B.Com, Medical' }, { name: 'Material Type', type: 'select', options: ['Books', 'Notes', 'Projects/Records', 'Other'] }, { name: 'Condition', type: 'select', options: ['New', 'Used'] }]) },
+        { name: 'Online Courses', slug: 'education-online', formFields: JSON.stringify([{ name: 'Course Topic', type: 'text', placeholder: 'e.g. Coding, Digital Marketing' }, { name: 'Platform/Provider', type: 'text' }, { name: 'Duration', type: 'text' }]) },
+        { name: 'Skill Development Training', slug: 'education-skills', formFields: JSON.stringify([{ name: 'Skill Category', type: 'text', placeholder: 'e.g. Language, Music, Dance, IT' }, { name: 'Mode of Training', type: 'select', options: ['Online', 'Offline', 'Hybrid'] }]) }
+    ];
+
+    for (const sub of booksSubcats) {
+        await prisma.subcategory.upsert({
+            where: { slug: sub.slug },
+            update: {},
+            create: { ...sub, categoryId: booksAndEducation.id }
+        });
+    }
+
     console.log('Seeding completed successfully!');
 }
 
