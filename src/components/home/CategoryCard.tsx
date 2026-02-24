@@ -16,6 +16,7 @@ const CATEGORY_IMAGES: Record<string, string> = {
   'home-appliances': 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=800&auto=format&fit=crop',
   'jobs': 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=800&auto=format&fit=crop',
   'industrial-products': 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=800&auto=format&fit=crop',
+  'pets-animals': 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?q=80&w=800&auto=format&fit=crop',
 };
 
 const SUBCATEGORY_IMAGES: Record<string, string> = {

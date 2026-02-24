@@ -187,6 +187,28 @@ async function main() {
         });
     }
 
+    // 8. Pets & Animals
+    const pets = await prisma.category.upsert({
+        where: { slug: 'pets-animals' },
+        update: {},
+        create: { name: '🐶 Pets & Animals', slug: 'pets-animals' }
+    });
+
+    const petsSubcats = [
+        { name: 'Pets for Sale', slug: 'pets-animals-sale', formFields: JSON.stringify([{ name: 'Type of Pet', type: 'select', options: ['Dog', 'Cat', 'Bird', 'Fish', 'Other'] }, { name: 'Breed', type: 'text' }, { name: 'Age', type: 'text' }]) },
+        { name: 'Pet Accessories', slug: 'pets-animals-accessories', formFields: JSON.stringify([{ name: 'Type', type: 'text' }, { name: 'Condition', type: 'select', options: ['New', 'Used'] }]) },
+        { name: 'Pet Food', slug: 'pets-animals-food', formFields: JSON.stringify([{ name: 'Type', type: 'text' }, { name: 'Brand', type: 'text' }]) },
+        { name: 'Pet Services', slug: 'pets-animals-services', formFields: JSON.stringify([{ name: 'Service Type', type: 'select', options: ['Grooming', 'Training', 'Boarding', 'Vet', 'Other'] }]) }
+    ];
+
+    for (const sub of petsSubcats) {
+        await prisma.subcategory.upsert({
+            where: { slug: sub.slug },
+            update: {},
+            create: { ...sub, categoryId: pets.id }
+        });
+    }
+
     console.log('Seeding completed successfully!');
 }
 
