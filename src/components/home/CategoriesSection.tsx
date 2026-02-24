@@ -26,27 +26,31 @@ const CategoriesSection = () => {
               Find exactly what you're looking for
             </p>
           </div>
-          <Button variant="ghost" className="hidden md:flex" asChild>
-            <Link to="/listings">
-              View All
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
           {categories.map((category) => (
             <CategoryCard key={category.id} category={category} />
           ))}
-        </div>
-
-        <div className="mt-8 text-center md:hidden">
-          <Button variant="outline" asChild>
-            <Link to="/listings">
-              View All Categories
-              <ArrowRight className="h-4 w-4" />
+          {/* View All Card */}
+          <div className="relative group h-48 md:h-56">
+            <Link
+              to="/listings"
+              className="block w-full h-full rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 relative border-2 border-transparent hover:border-primary/50"
+            >
+              <img
+                src="https://images.unsplash.com/photo-1472851294608-062f824d29cc?q=80&w=800&auto=format&fit=crop"
+                alt="View All Categories"
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-5">
+                <h3 className="text-white font-bold text-lg md:text-xl drop-shadow-md">View All Categories</h3>
+                <div className="text-white/90 text-sm font-medium flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 mt-2">
+                  Explore <ArrowRight className="h-4 w-4" />
+                </div>
+              </div>
             </Link>
-          </Button>
+          </div>
         </div>
       </div>
     </section>
