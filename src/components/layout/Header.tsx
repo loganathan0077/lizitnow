@@ -173,7 +173,7 @@ const Header = () => {
             )}
 
             {/* Post Ad Button */}
-            <Link to="/post-ad" className="hidden xs:block">
+            <Link to="/post-ad" className="shrink-0">
               <Button className="font-medium shadow-sm hover:shadow-md transition-all gap-2 rounded-full px-5 bg-gradient-to-r from-primary to-olive hover:from-primary/90 hover:to-olive/90 text-white border-0">
                 <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline">Post Ad</span>
