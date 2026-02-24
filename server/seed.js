@@ -284,6 +284,29 @@ async function main() {
         });
     }
 
+    // 12. Sports & Fitness
+    const sports = await prisma.category.upsert({
+        where: { slug: 'sports-fitness' },
+        update: {},
+        create: { name: '🏋️ Sports & Fitness', slug: 'sports-fitness' }
+    });
+
+    const sportsSubcats = [
+        { name: 'Gym Equipment', slug: 'sports-gym', formFields: JSON.stringify([{ name: 'Equipment Type', type: 'text', placeholder: 'e.g. Dumbbells, Bench' }, { name: 'Condition', type: 'select', options: ['New', 'Used'] }]) },
+        { name: 'Cycles', slug: 'sports-cycles', formFields: JSON.stringify([{ name: 'Brand', type: 'text' }, { name: 'Type', type: 'select', options: ['Mountain', 'Gear', 'Normal', 'Kids', 'Other'] }, { name: 'Condition', type: 'select', options: ['New', 'Used'] }]) },
+        { name: 'Sports Accessories', slug: 'sports-accessories', formFields: JSON.stringify([{ name: 'Sport Type', type: 'text', placeholder: 'e.g. Cricket, Football, Badminton' }, { name: 'Accessory', type: 'text' }, { name: 'Condition', type: 'select', options: ['New', 'Used'] }]) },
+        { name: 'Treadmills', slug: 'sports-treadmills', formFields: JSON.stringify([{ name: 'Brand', type: 'text' }, { name: 'Type', type: 'select', options: ['Manual', 'Motorized'] }, { name: 'Max Weight Capacity', type: 'text' }, { name: 'Condition', type: 'select', options: ['New', 'Used'] }]) },
+        { name: 'Yoga Accessories', slug: 'sports-yoga', formFields: JSON.stringify([{ name: 'Type', type: 'text', placeholder: 'e.g. Mat, Blocks, Bands' }, { name: 'Condition', type: 'select', options: ['New', 'Used'] }]) }
+    ];
+
+    for (const sub of sportsSubcats) {
+        await prisma.subcategory.upsert({
+            where: { slug: sub.slug },
+            update: {},
+            create: { ...sub, categoryId: sports.id }
+        });
+    }
+
     console.log('Seeding completed successfully!');
 }
 

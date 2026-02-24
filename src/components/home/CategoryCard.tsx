@@ -20,6 +20,7 @@ const CATEGORY_IMAGES: Record<string, string> = {
   'event-services': 'https://images.unsplash.com/photo-1511556532299-8f662fc26c06?q=80&w=800&auto=format&fit=crop',
   'services': 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=800&auto=format&fit=crop',
   'books-education': 'https://images.unsplash.com/photo-1532012197267-da84d127e765?q=80&w=800&auto=format&fit=crop',
+  'sports-fitness': 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=800&auto=format&fit=crop',
 };
 
 const SUBCATEGORY_IMAGES: Record<string, string> = {
