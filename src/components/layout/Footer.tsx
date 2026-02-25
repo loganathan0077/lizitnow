@@ -99,18 +99,15 @@ const Footer = () => {
 
       <div className="border-t border-border mt-auto">
         <div className="container-tight py-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="text-center md:text-left text-muted-foreground text-sm">
-              <p>© {currentYear} Liztitnow.com</p>
+              <p>© {currentYear} Liztitnow.com — A product of Shermon Industries. All rights reserved.</p>
             </div>
             <div className="flex flex-wrap justify-center gap-4 md:gap-6 text-sm">
               <Link to="/privacy" className="text-muted-foreground hover:text-primary transition-colors">Privacy Policy</Link>
               <Link to="/terms" className="text-muted-foreground hover:text-primary transition-colors">Terms of Service</Link>
               <Link to="/sitemap" className="text-muted-foreground hover:text-primary transition-colors">Sitemap</Link>
             </div>
-          </div>
-          <div className="text-center text-muted-foreground text-sm opacity-80 pt-6 border-t border-border/40">
-            <p>A product of Shermon Industries. All rights reserved.</p>
           </div>
         </div>
       </div>
