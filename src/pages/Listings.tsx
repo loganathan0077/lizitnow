@@ -89,7 +89,9 @@ const Listings = () => {
     }
 
     // Filter by category
-    if (activeCategory !== 'all') {
+    if (activeCategory === 'b2b') {
+      result = result.filter(l => l.isB2B === true);
+    } else if (activeCategory !== 'all') {
       result = result.filter(l => l.category === activeCategory);
     }
 
@@ -185,8 +187,13 @@ const Listings = () => {
           <div className="container-tight">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
-                  {globalSearch ? `Results for "${globalSearch}"` : (activeCategoryData ? activeCategoryData.name : 'All Listings')}
+                <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
+                  {globalSearch ? `Results for "${globalSearch}"` : (activeCategory === 'b2b' ? 'B2B / Wholesale' : (activeCategoryData ? activeCategoryData.name : 'All Listings'))}
+                  {activeCategory === 'b2b' && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary uppercase tracking-wider border border-primary/20 align-middle">
+                      Verified
+                    </span>
+                  )}
                 </h1>
                 <p className="text-muted-foreground mt-1">
                   {filteredListings.length} ads found
@@ -216,6 +223,17 @@ const Listings = () => {
                 )}
               >
                 All Categories
+              </button>
+              <button
+                onClick={() => handleCategoryChange('b2b')}
+                className={cn(
+                  "flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border",
+                  activeCategory === 'b2b'
+                    ? "bg-primary text-primary-foreground border-transparent shadow-md"
+                    : "bg-primary/5 text-primary border-primary/20 hover:bg-primary/10"
+                )}
+              >
+                B2B / Wholesale
               </button>
               {categories.map((cat) => {
                 const Icon = iconMap[cat.icon];

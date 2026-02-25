@@ -29,6 +29,12 @@ const CategoriesSection = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+          <CategoryCard category={{
+            id: 'b2b-wholesale',
+            name: 'B2B / Wholesale',
+            slug: 'b2b',
+            icon: 'PackageSearch'
+          }} />
           {categories.map((category) => (
             <CategoryCard key={category.id} category={category} />
           ))}
