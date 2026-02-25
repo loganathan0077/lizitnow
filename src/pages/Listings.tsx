@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -16,10 +16,20 @@ import {
   Refrigerator,
   Car,
   Search,
-  MapPin
+  MapPin,
+  Briefcase,
+  Wrench,
+  Stethoscope,
+  BookOpen,
+  Dumbbell,
+  Dog,
+  PartyPopper,
+  Factory
 } from 'lucide-react';
-import { listings, categories, formatPrice, locations } from '@/data/mockData';
+import { listings, formatPrice, locations } from '@/data/mockData';
 import { cn } from '@/lib/utils';
+import { useLocationContext } from '@/context/LocationContext';
+import { LocationFilter } from '@/components/shared/LocationFilter';
 
 const iconMap: Record<string, any> = {
   Smartphone,
@@ -27,6 +37,15 @@ const iconMap: Record<string, any> = {
   Sofa,
   Refrigerator,
   Car,
+  MapPin,
+  Briefcase,
+  Wrench,
+  Stethoscope,
+  BookOpen,
+  Dumbbell,
+  Dog,
+  PartyPopper,
+  Factory
 };
 
 const conditionOptions = [
@@ -74,8 +93,17 @@ const Listings = () => {
   const [condition, setCondition] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [priceRange, setPriceRange] = useState<[number | '', number | '']>([0, '']);
-  const [locationFilter, setLocationFilter] = useState(searchParams.get('location') || 'All Locations');
+  const { location: selectedLocation, setLocation: setSelectedLocation } = useLocationContext();
   const [brandSearch, setBrandSearch] = useState('');
+
+  const [categoriesList, setCategoriesList] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('http://localhost:5001/api/categories')
+      .then(res => res.json())
+      .then(data => setCategoriesList(data.categories || []))
+      .catch(err => console.error(err));
+  }, []);
 
   // New Filter States
   const [saleType, setSaleType] = useState('all'); // 'all', 'retail', 'b2b'
@@ -158,9 +186,9 @@ const Listings = () => {
       return itemPrice >= minPrice && itemPrice <= maxPrice;
     });
 
-    // Filter by location
-    if (locationFilter !== 'All Locations') {
-      result = result.filter(l => l.location === locationFilter);
+    // Filter by location (global context sync)
+    if (selectedLocation !== 'All Locations') {
+      result = result.filter(l => l.location === selectedLocation);
     }
 
     // Filter by Brand/Model (Simple text search on title)
@@ -208,7 +236,7 @@ const Listings = () => {
 
     return result;
   }, [
-    activeCategory, condition, sortBy, priceRange, locationFilter,
+    activeCategory, condition, sortBy, priceRange, selectedLocation,
     brandSearch, globalSearch, dynamicFilters,
     saleType, postedWithin, verifiedOnly,
     b2bMaxMoq, b2bInStock, b2bDelivery
@@ -225,11 +253,11 @@ const Listings = () => {
   };
 
   const handleLocationChange = (location: string) => {
-    setLocationFilter(location);
-    if (location === 'All Locations') {
-      searchParams.delete('location');
-    } else {
+    setSelectedLocation(location || 'All Locations');
+    if (location && location !== 'All Locations') {
       searchParams.set('location', location);
+    } else {
+      searchParams.delete('location');
     }
     setSearchParams(searchParams);
   };
@@ -237,7 +265,7 @@ const Listings = () => {
   const clearFilters = () => {
     setCondition('all');
     setPriceRange([0, '']);
-    setLocationFilter('All Locations');
+    setSelectedLocation('All Locations');
     setBrandSearch('');
 
     // Reset new filters
@@ -255,7 +283,7 @@ const Listings = () => {
     handleCategoryChange('all');
   };
 
-  const activeCategoryData = categories.find(c => c.slug === activeCategory);
+  const activeCategoryData = categoriesList.find(c => c.slug === activeCategory);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -315,11 +343,11 @@ const Listings = () => {
               >
                 B2B / Wholesale
               </button>
-              {categories.map((cat) => {
-                const Icon = iconMap[cat.icon];
+              {categoriesList.map((cat) => {
+                const Icon = iconMap[cat.icon] || MapPin;
                 return (
                   <button
-                    key={cat.id}
+                    key={cat.id || cat.slug}
                     onClick={() => handleCategoryChange(cat.slug)}
                     className={cn(
                       "flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors",
@@ -328,7 +356,7 @@ const Listings = () => {
                         : "bg-card text-foreground hover:bg-muted"
                     )}
                   >
-                    {Icon && <Icon className="h-4 w-4" />}
+                    <Icon className="h-4 w-4" />
                     {cat.name}
                   </button>
                 );
@@ -366,15 +394,11 @@ const Listings = () => {
                 {/* Location */}
                 <div>
                   <Label className="text-sm font-medium mb-2 block">Location</Label>
-                  <select
-                    value={locationFilter}
-                    onChange={(e) => handleLocationChange(e.target.value)}
-                    className="w-full h-10 px-3 rounded-lg bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  >
-                    {locations.map((loc) => (
-                      <option key={loc} value={loc}>{loc}</option>
-                    ))}
-                  </select>
+                  <LocationFilter
+                    value={selectedLocation}
+                    onChange={handleLocationChange}
+                    className="w-full h-10 px-3 rounded-lg bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 hover:bg-secondary/90 transition-colors"
+                  />
                 </div>
 
                 {/* Sale Type */}
@@ -593,15 +617,11 @@ const Listings = () => {
                   {/* Location */}
                   <div>
                     <Label className="text-sm font-medium mb-2 block">Location</Label>
-                    <select
-                      value={locationFilter}
-                      onChange={(e) => handleLocationChange(e.target.value)}
-                      className="w-full h-10 px-3 rounded-lg bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    >
-                      {locations.map((loc) => (
-                        <option key={loc} value={loc}>{loc}</option>
-                      ))}
-                    </select>
+                    <LocationFilter
+                      value={selectedLocation}
+                      onChange={handleLocationChange}
+                      className="w-full h-10 px-3 rounded-lg bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 hover:bg-secondary/90"
+                    />
                   </div>
 
                   {/* Sale Type Mobile */}
