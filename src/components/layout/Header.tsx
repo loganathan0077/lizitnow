@@ -134,26 +134,6 @@ const Header = () => {
 
           {/* Action Icons */}
           <div className="flex items-center gap-1 sm:gap-3 ml-4">
-            {/* Desktop Auth */}
-            <div className="hidden md:flex items-center gap-3 mr-2">
-              {isAuthenticated ? (
-                <Link to="/dashboard">
-                  <Button variant="ghost" className="hidden lg:flex items-center gap-2 hover:bg-secondary">
-                    <User className="h-4 w-4" />
-                    <span className="font-medium">My Account</span>
-                    {isVerified && <BadgeCheck className="h-4 w-4 text-trust-blue ml-1" />}
-                  </Button>
-                </Link>
-              ) : (
-                <Link to="/login">
-                  <Button variant="ghost" className="font-medium hover:bg-secondary group hidden sm:flex">
-                    <LogIn className="h-4 w-4 mr-2 group-hover:text-primary transition-colors" />
-                    Sign In
-                  </Button>
-                </Link>
-              )}
-            </div>
-
             {/* Mobile Search Toggle */}
             <Button
               variant="ghost"
@@ -179,6 +159,26 @@ const Header = () => {
                 <span className="hidden sm:inline">Post Ad</span>
               </Button>
             </Link>
+
+            {/* Desktop Auth */}
+            <div className="hidden md:flex items-center gap-3 ml-1">
+              {isAuthenticated ? (
+                <Link to="/dashboard">
+                  <Button variant="ghost" className="hidden lg:flex items-center gap-2 hover:bg-secondary">
+                    <User className="h-4 w-4" />
+                    <span className="font-medium">My Account</span>
+                    {isVerified && <BadgeCheck className="h-4 w-4 text-trust-blue ml-1" />}
+                  </Button>
+                </Link>
+              ) : (
+                <Link to="/login">
+                  <Button variant="ghost" className="font-medium hover:bg-secondary group hidden sm:flex">
+                    <LogIn className="h-4 w-4 mr-2 group-hover:text-primary transition-colors" />
+                    Sign In
+                  </Button>
+                </Link>
+              )}
+            </div>
 
             {/* Mobile Menu Toggle */}
             <button
