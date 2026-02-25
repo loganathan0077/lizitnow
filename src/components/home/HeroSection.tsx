@@ -23,7 +23,7 @@ const HeroSection = () => {
   const [count, setCount] = useState(3);
 
   const plugin = useRef(
-    Autoplay({ delay: 3000, stopOnInteraction: true })
+    Autoplay({ delay: 3000, stopOnInteraction: false })
   );
 
   useEffect(() => {
