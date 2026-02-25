@@ -21,6 +21,9 @@ import SafetyTips from './pages/SafetyTips';
 import ContactUs from './pages/ContactUs';
 import ReportIssue from './pages/ReportIssue';
 import CategoryView from './pages/CategoryView';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
+import Sitemap from './pages/Sitemap';
 
 const queryClient = new QueryClient();
 
@@ -99,6 +102,9 @@ const App = () => (
             <Route path="/safety" element={<SafetyTips />} />
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/report" element={<ReportIssue />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/sitemap" element={<Sitemap />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="/:categorySlug" element={<CategoryView />} />
             <Route path="/:categorySlug/:subcategorySlug" element={<CategoryView />} />
