@@ -43,21 +43,24 @@ const sortOptions = [
 ];
 
 const categorySpecificFilters: Record<string, { key: string, label: string, options: string[] }[]> = {
-  'real-estate': [
-    { key: 'Approval Type', label: 'Approval Type', options: ['DTCP', 'CMDA', 'Panchayat', 'NA'] },
-    { key: 'Facing Direction', label: 'Facing Direction', options: ['East', 'West', 'North', 'South'] },
-    { key: 'Corner Plot', label: 'Corner Plot', options: ['Yes', 'No'] }
-  ],
-  'furniture': [
-    { key: 'Material', label: 'Material', options: ['Wood', 'Plastic', 'Metal', 'Leather', 'Sheesham Wood'] },
-    { key: 'Assembly Required', label: 'Assembly Required', options: ['Yes', 'No'] }
-  ],
   'mobiles': [
     { key: 'RAM', label: 'RAM', options: ['4GB', '6GB', '8GB', '12GB', '16GB'] },
     { key: 'Storage', label: 'Storage', options: ['64GB', '128GB', '256GB', '512GB', '1TB'] }
   ],
   'electronics': [
-    { key: 'Brand', label: 'Brand', options: ['Apple', 'Samsung', 'Sony', 'LG', 'HP', 'Dell'] }
+    { key: 'RAM', label: 'RAM', options: ['4GB', '8GB', '16GB', '32GB', '64GB'] },
+    { key: 'Storage', label: 'Storage', options: ['256GB', '512GB', '1TB', '2TB'] },
+    { key: 'Warranty', label: 'Warranty', options: ['Under Warranty', 'Out of Warranty'] }
+  ],
+  'vehicles': [
+    { key: 'Fuel Type', label: 'Fuel Type', options: ['Petrol', 'Diesel', 'Electric', 'CNG'] },
+    { key: 'KM Driven', label: 'KM Driven', options: ['0-10,000 km', '10,000-30,000 km', '30,000-50,000 km', '50,000+ km'] },
+    { key: 'Transmission', label: 'Transmission', options: ['Manual', 'Automatic'] }
+  ],
+  'real-estate': [
+    { key: 'BHK', label: 'BHK', options: ['1 BHK', '2 BHK', '3 BHK', '4+ BHK'] },
+    { key: 'Area (Sq.ft)', label: 'Area (Sq.ft)', options: ['Under 500', '500-1000', '1000-2000', '2000+'] },
+    { key: 'Furnishing', label: 'Furnishing', options: ['Fully Furnished', 'Semi-Furnished', 'Unfurnished'] }
   ]
 };
 
@@ -73,6 +76,15 @@ const Listings = () => {
   const [priceRange, setPriceRange] = useState<[number | '', number | '']>([0, '']);
   const [locationFilter, setLocationFilter] = useState(searchParams.get('location') || 'All Locations');
   const [brandSearch, setBrandSearch] = useState('');
+
+  // New Filter States
+  const [saleType, setSaleType] = useState('all'); // 'all', 'retail', 'b2b'
+  const [postedWithin, setPostedWithin] = useState('all'); // 'all', 'today', '3days', '7days', '30days'
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [b2bMaxMoq, setB2bMaxMoq] = useState<number | ''>('');
+  const [b2bInStock, setB2bInStock] = useState(false);
+  const [b2bDelivery, setB2bDelivery] = useState(false);
+
   const [dynamicFilters, setDynamicFilters] = useState<Record<string, string>>({});
 
   const filteredListings = useMemo(() => {
@@ -95,6 +107,42 @@ const Listings = () => {
       result = result.filter(l => l.category === activeCategory);
     }
 
+    // 1. Sale Type Filter
+    if (saleType !== 'all') {
+      if (saleType === 'b2b') {
+        result = result.filter(l => l.isB2B === true);
+      } else if (saleType === 'retail') {
+        result = result.filter(l => !l.isB2B);
+      }
+    }
+
+    // 2. Posted Date Filter
+    if (postedWithin !== 'all') {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(); // Start of today
+
+      result = result.filter(l => {
+        const adDate = new Date(l.createdAt).getTime();
+        switch (postedWithin) {
+          case 'today':
+            return adDate >= today;
+          case '3days':
+            return adDate >= today - 3 * 24 * 60 * 60 * 1000;
+          case '7days':
+            return adDate >= today - 7 * 24 * 60 * 60 * 1000;
+          case '30days':
+            return adDate >= today - 30 * 24 * 60 * 60 * 1000;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // 3. Verified Seller Filter
+    if (verifiedOnly) {
+      result = result.filter(l => l.seller.badges && l.seller.badges.includes('verified'));
+    }
+
     // Filter by condition
     if (condition !== 'all') {
       result = result.filter(l => l.condition === condition);
@@ -103,7 +151,12 @@ const Listings = () => {
     // Filter by price
     const minPrice = priceRange[0] === '' ? 0 : priceRange[0];
     const maxPrice = priceRange[1] === '' ? Infinity : priceRange[1];
-    result = result.filter(l => l.price >= minPrice && l.price <= maxPrice);
+
+    // Check against appropriate price based on B2B status
+    result = result.filter(l => {
+      const itemPrice = l.isB2B && saleType !== 'retail' && l.b2bPricePerUnit ? l.b2bPricePerUnit : l.price;
+      return itemPrice >= minPrice && itemPrice <= maxPrice;
+    });
 
     // Filter by location
     if (locationFilter !== 'All Locations') {
@@ -114,6 +167,19 @@ const Listings = () => {
     if (brandSearch.trim()) {
       const query = brandSearch.toLowerCase();
       result = result.filter(l => l.title.toLowerCase().includes(query));
+    }
+
+    // 5. B2B Specific Filters
+    if (activeCategory === 'b2b' || saleType === 'b2b') {
+      if (b2bMaxMoq !== '') {
+        result = result.filter(l => l.isB2B && l.b2bMoq && l.b2bMoq <= b2bMaxMoq);
+      }
+      if (b2bInStock) {
+        result = result.filter(l => l.isB2B && l.b2bStock && l.b2bStock > 0);
+      }
+      if (b2bDelivery) {
+        result = result.filter(l => l.isB2B && l.b2bDelivery === true);
+      }
     }
 
     // Dynamic Specifications filter
@@ -141,7 +207,12 @@ const Listings = () => {
     }
 
     return result;
-  }, [activeCategory, condition, sortBy, priceRange, locationFilter, brandSearch, globalSearch, dynamicFilters]);
+  }, [
+    activeCategory, condition, sortBy, priceRange, locationFilter,
+    brandSearch, globalSearch, dynamicFilters,
+    saleType, postedWithin, verifiedOnly,
+    b2bMaxMoq, b2bInStock, b2bDelivery
+  ]);
 
   const handleCategoryChange = (slug: string) => {
     if (slug === 'all') {
@@ -168,6 +239,15 @@ const Listings = () => {
     setPriceRange([0, '']);
     setLocationFilter('All Locations');
     setBrandSearch('');
+
+    // Reset new filters
+    setSaleType('all');
+    setPostedWithin('all');
+    setVerifiedOnly(false);
+    setB2bMaxMoq('');
+    setB2bInStock(false);
+    setB2bDelivery(false);
+
     setDynamicFilters({});
 
     searchParams.delete('q');
@@ -297,6 +377,55 @@ const Listings = () => {
                   </select>
                 </div>
 
+                {/* Sale Type */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Sale Type</Label>
+                  <select
+                    value={saleType}
+                    onChange={(e) => setSaleType(e.target.value)}
+                    className="w-full h-10 px-3 rounded-lg bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option value="all">All Types</option>
+                    <option value="retail">Retail Sale</option>
+                    <option value="b2b">B2B / Wholesale</option>
+                  </select>
+                </div>
+
+                {/* Posted Within */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Posted Within</Label>
+                  <select
+                    value={postedWithin}
+                    onChange={(e) => setPostedWithin(e.target.value)}
+                    className="w-full h-10 px-3 rounded-lg bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option value="all">Anytime</option>
+                    <option value="today">Today</option>
+                    <option value="3days">Last 3 Days</option>
+                    <option value="7days">Last 7 Days</option>
+                    <option value="30days">Last 30 Days</option>
+                  </select>
+                </div>
+
+                {/* Verified Sellers Only */}
+                <div>
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <div className={cn(
+                      "w-4 h-4 rounded border flex items-center justify-center transition-colors",
+                      verifiedOnly ? "border-primary bg-primary" : "border-muted-foreground group-hover:border-primary"
+                    )}>
+                      {verifiedOnly && <div className="w-2 h-2 rounded-sm bg-primary-foreground" />}
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={verifiedOnly}
+                      onChange={(e) => setVerifiedOnly(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <span className="text-sm font-medium text-foreground">Verified Sellers Only</span>
+                  </label>
+                </div>
+
                 {/* Price Range */}
                 <div>
                   <Label className="text-sm font-medium mb-2 block">Price Range (₹)</Label>
@@ -367,6 +496,60 @@ const Listings = () => {
                   </div>
                 )}
 
+                {/* B2B Specific Filters */}
+                {(activeCategory === 'b2b' || saleType === 'b2b') && (
+                  <div className="pt-4 border-t border-border space-y-6">
+                    <h4 className="font-semibold text-sm text-primary mb-2">Wholesale Filters</h4>
+
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block">Max Minimum Order (MOQ)</Label>
+                      <Input
+                        type="number"
+                        value={b2bMaxMoq}
+                        onChange={(e) => setB2bMaxMoq(e.target.value === '' ? '' : Number(e.target.value))}
+                        placeholder="e.g. 50 Units"
+                        className="h-10"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="flex items-center gap-2 cursor-pointer group">
+                        <div className={cn(
+                          "w-4 h-4 rounded border flex items-center justify-center transition-colors",
+                          b2bInStock ? "border-primary bg-primary" : "border-muted-foreground group-hover:border-primary"
+                        )}>
+                          {b2bInStock && <div className="w-2 h-2 rounded-sm bg-primary-foreground" />}
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={b2bInStock}
+                          onChange={(e) => setB2bInStock(e.target.checked)}
+                          className="sr-only"
+                        />
+                        <span className="text-sm text-foreground">In Stock Only</span>
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="flex items-center gap-2 cursor-pointer group">
+                        <div className={cn(
+                          "w-4 h-4 rounded border flex items-center justify-center transition-colors",
+                          b2bDelivery ? "border-primary bg-primary" : "border-muted-foreground group-hover:border-primary"
+                        )}>
+                          {b2bDelivery && <div className="w-2 h-2 rounded-sm bg-primary-foreground" />}
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={b2bDelivery}
+                          onChange={(e) => setB2bDelivery(e.target.checked)}
+                          className="sr-only"
+                        />
+                        <span className="text-sm text-foreground">Delivery Available</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
                 {/* Sort */}
                 <div className="pt-4 border-t border-border">
                   <Label className="text-sm font-medium mb-2 block">Sort By</Label>
@@ -419,6 +602,55 @@ const Listings = () => {
                         <option key={loc} value={loc}>{loc}</option>
                       ))}
                     </select>
+                  </div>
+
+                  {/* Sale Type Mobile */}
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Sale Type</Label>
+                    <select
+                      value={saleType}
+                      onChange={(e) => setSaleType(e.target.value)}
+                      className="w-full h-10 px-3 rounded-lg bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="all">All Types</option>
+                      <option value="retail">Retail Sale</option>
+                      <option value="b2b">B2B / Wholesale</option>
+                    </select>
+                  </div>
+
+                  {/* Posted Within Mobile */}
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Posted Within</Label>
+                    <select
+                      value={postedWithin}
+                      onChange={(e) => setPostedWithin(e.target.value)}
+                      className="w-full h-10 px-3 rounded-lg bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="all">Anytime</option>
+                      <option value="today">Today</option>
+                      <option value="3days">Last 3 Days</option>
+                      <option value="7days">Last 7 Days</option>
+                      <option value="30days">Last 30 Days</option>
+                    </select>
+                  </div>
+
+                  {/* Verified Sellers Only Mobile */}
+                  <div>
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <div className={cn(
+                        "w-4 h-4 rounded border flex items-center justify-center transition-colors",
+                        verifiedOnly ? "border-primary bg-primary" : "border-muted-foreground group-hover:border-primary"
+                      )}>
+                        {verifiedOnly && <div className="w-2 h-2 rounded-sm bg-primary-foreground" />}
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={verifiedOnly}
+                        onChange={(e) => setVerifiedOnly(e.target.checked)}
+                        className="sr-only"
+                      />
+                      <span className="text-sm font-medium text-foreground">Verified Sellers Only</span>
+                    </label>
                   </div>
 
                   {/* Price Range */}
@@ -480,6 +712,60 @@ const Listings = () => {
                           </select>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {/* B2B Specific Filters Mobile */}
+                  {(activeCategory === 'b2b' || saleType === 'b2b') && (
+                    <div className="pt-4 border-t border-border space-y-6">
+                      <h4 className="font-semibold text-sm text-primary mb-2">Wholesale Filters</h4>
+
+                      <div>
+                        <Label className="text-sm font-medium mb-2 block">Max Minimum Order (MOQ)</Label>
+                        <Input
+                          type="number"
+                          value={b2bMaxMoq}
+                          onChange={(e) => setB2bMaxMoq(e.target.value === '' ? '' : Number(e.target.value))}
+                          placeholder="e.g. 50 Units"
+                          className="h-10"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                          <div className={cn(
+                            "w-4 h-4 rounded border flex items-center justify-center transition-colors",
+                            b2bInStock ? "border-primary bg-primary" : "border-muted-foreground group-hover:border-primary"
+                          )}>
+                            {b2bInStock && <div className="w-2 h-2 rounded-sm bg-primary-foreground" />}
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={b2bInStock}
+                            onChange={(e) => setB2bInStock(e.target.checked)}
+                            className="sr-only"
+                          />
+                          <span className="text-sm text-foreground">In Stock Only</span>
+                        </label>
+                      </div>
+
+                      <div>
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                          <div className={cn(
+                            "w-4 h-4 rounded border flex items-center justify-center transition-colors",
+                            b2bDelivery ? "border-primary bg-primary" : "border-muted-foreground group-hover:border-primary"
+                          )}>
+                            {b2bDelivery && <div className="w-2 h-2 rounded-sm bg-primary-foreground" />}
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={b2bDelivery}
+                            onChange={(e) => setB2bDelivery(e.target.checked)}
+                            className="sr-only"
+                          />
+                          <span className="text-sm text-foreground">Delivery Available</span>
+                        </label>
+                      </div>
                     </div>
                   )}
 
