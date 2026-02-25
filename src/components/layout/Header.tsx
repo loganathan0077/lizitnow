@@ -145,12 +145,10 @@ const Header = () => {
             </Button>
 
             {/* Notifications */}
-            {isAuthenticated && (
-              <Button variant="ghost" size="icon" className="relative hover:bg-secondary text-foreground">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full border-2 border-background"></span>
-              </Button>
-            )}
+            <Button variant="ghost" size="icon" className="relative hover:bg-secondary text-foreground">
+              <Bell className="h-5 w-5" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full border-2 border-background"></span>
+            </Button>
 
             {/* Post Ad Button */}
             <Link to="/post-ad" className="shrink-0">
