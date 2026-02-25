@@ -259,7 +259,7 @@ const HeroSection = () => {
           {/* SLIDE 4: B2B / Wholesale Promotion */}
           <CarouselItem>
             <div className="relative overflow-hidden w-full h-[500px] md:h-[600px] flex items-center">
-              <img src="https://images.unsplash.com/photo-1586528116311-ad8ed7c508c0?q=80&w=2070&auto=format&fit=crop" alt="B2B Wholesale Operations" className="absolute inset-0 w-full h-full object-cover" />
+              <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=2070&auto=format&fit=crop" alt="B2B Wholesale Operations" className="absolute inset-0 w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-r from-slate-900/95 via-indigo-950/80 to-black/40" />
 
               <div className="container-tight relative z-10 w-full py-16 md:py-24 text-left">
