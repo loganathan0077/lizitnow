@@ -22,7 +22,7 @@ const CATEGORY_IMAGES: Record<string, string> = {
   'books-education': 'https://images.unsplash.com/photo-1532012197267-da84d127e765?q=80&w=800&auto=format&fit=crop',
   'sports-fitness': 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=800&auto=format&fit=crop',
   'fashion-lifestyle': 'https://images.unsplash.com/photo-1445205170230-053b83016050?q=80&w=800&auto=format&fit=crop',
-  'b2b': 'https://images.unsplash.com/photo-1586528116311-ad8ed7450862?q=80&w=800&auto=format&fit=crop',
+  'b2b': 'https://images.unsplash.com/photo-1587293852726-70cdb56c2866?q=80&w=800&auto=format&fit=crop',
 };
 
 const SUBCATEGORY_IMAGES: Record<string, string> = {
@@ -35,7 +35,7 @@ const SUBCATEGORY_IMAGES: Record<string, string> = {
   'real-estate-rental': 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=800&auto=format&fit=crop',
   'real-estate-commercial-shops': 'https://images.unsplash.com/photo-1534433722253-ab8c0e25b128?q=80&w=800&auto=format&fit=crop',
   'real-estate-office-spaces': 'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=800&auto=format&fit=crop',
-  'real-estate-warehouse-industrial': 'https://images.unsplash.com/photo-1586528116311-ad8ed7450862?q=80&w=800&auto=format&fit=crop',
+  'real-estate-warehouse-industrial': 'https://images.unsplash.com/photo-1587293852726-70cdb56c2866?q=80&w=800&auto=format&fit=crop',
   'real-estate-gated-plots': 'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?q=80&w=800&auto=format&fit=crop',
 
   // Vehicles
