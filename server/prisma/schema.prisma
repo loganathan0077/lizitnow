@@ -31,6 +31,7 @@ model User {
   payments         Payment[]
   referralsMade    Referral[] @relation("Referrer")
   referralsUsed    Referral[] @relation("ReferredUser")
+  walletTransactions WalletTransaction[]
 }
 
 model Payment {
@@ -72,7 +73,31 @@ model Category {
   slug          String         @unique
   subcategories Subcategory[]
   ads           Ad[]
+  pricing       CategoryPricing?
   createdAt     DateTime       @default(now())
+}
+
+model CategoryPricing {
+  id              String   @id @default(uuid())
+  categoryId      String   @unique
+  category        Category @relation(fields: [categoryId], references: [id])
+  price           Float
+  validityDays    Int      @default(30)
+  pricingType     String   @default("standard")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model WalletTransaction {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  amount          Float
+  type            String   // deduction, topup, renewal
+  description     String?
+  adId            String?
+  ad              Ad?      @relation(fields: [adId], references: [id])
+  createdAt       DateTime @default(now())
 }
 
 model Subcategory {
@@ -119,4 +144,10 @@ model Ad {
   b2bBusinessName  String?
   b2bGstNumber     String?
   b2bDelivery      Boolean?
+
+  // Monetization fields
+  validityDays     Int      @default(30)
+  pricePaid        Float    @default(0)
+  adPlanType       String   @default("standard") // launch, standard, premium
+  walletTransactions WalletTransaction[]
 }

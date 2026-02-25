@@ -196,6 +196,7 @@ app.get('/api/categories', async (req, res) => {
         const categories = await prisma.category.findMany({
             include: {
                 subcategories: true,
+                pricing: true,
                 _count: {
                     select: { ads: true }
                 }
@@ -262,6 +263,24 @@ app.get('/api/ads', async (req, res) => {
     }
 });
 
+// Get User Ads
+app.get('/api/user/ads', authenticate, async (req, res) => {
+    try {
+        const ads = await prisma.ad.findMany({
+            where: { userId: req.user.userId },
+            include: {
+                category: true,
+                subcategory: true
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json({ ads });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Get single ad by ID
 app.get('/api/ads/:id', async (req, res) => {
     try {
@@ -297,18 +316,50 @@ app.post('/api/ads/post', authenticate, async (req, res) => {
 
         if (!user) return res.status(404).json({ error: 'User not found' });
 
-        const isMember = user.membershipExpiry && new Date(user.membershipExpiry) > new Date();
-
-        // 5 free ads check
-        if (!isMember && user.adsPosted >= 5) {
-            return res.status(403).json({ error: 'Ad limit reached. Please purchase a 6-month membership for ₹100 to continue posting.' });
-        }
-
         const {
             title, description, price, categoryId, subcategoryId,
             condition, location, images, dynamicData, includedItems, videoUrl, mapUrl,
             isB2B, b2bMoq, b2bPricePerUnit, b2bStock, b2bBusinessName, b2bGstNumber, b2bDelivery
         } = req.body;
+
+        const category = await prisma.category.findUnique({
+            where: { id: categoryId },
+            include: { pricing: true }
+        });
+
+        if (!category) return res.status(400).json({ error: 'Invalid category' });
+
+        // Pricing Logic
+        let adPlanType = 'standard';
+        let priceToDeduct = category.pricing ? category.pricing.price : 10;
+        let validityDays = category.pricing ? category.pricing.validityDays : 30;
+
+        const isServiceOrEvent = ['services', 'events', 'event-services'].includes(category.slug);
+
+        // Launch offer logic: First 2 free, next 30 for ₹1
+        if (!isServiceOrEvent && user.adsPosted < 32) {
+            adPlanType = 'launch';
+            if (user.adsPosted < 2) {
+                priceToDeduct = 0; // First 2 free
+            } else {
+                priceToDeduct = 1; // Next 30 for 1 rupee
+            }
+            validityDays = 30; // Launch offer validity is strictly 30.
+        }
+
+        // Check Wallet Balance
+        if (user.walletBalance < priceToDeduct) {
+            return res.status(400).json({ error: `Insufficient wallet balance. Listing fee is ₹${priceToDeduct}. Please recharge.` });
+        }
+
+        // Category Misuse Validation Flag (MVP)
+        let adStatus = 'active';
+        if (!['properties', 'real-estate'].includes(category.slug)) {
+            const lowerTitle = title.toLowerCase();
+            if (lowerTitle.includes('plot') || lowerTitle.includes('flat') || lowerTitle.includes('apartment') || lowerTitle.includes('land')) {
+                adStatus = 'pending'; // Flag for admin review
+            }
+        }
 
         // Verify subcategory exists
         const subcategory = await prisma.subcategory.findUnique({ where: { id: subcategoryId } });
@@ -322,40 +373,68 @@ app.post('/api/ads/post', authenticate, async (req, res) => {
 
         const now = new Date();
         const expiresAt = new Date();
-        expiresAt.setDate(now.getDate() + 30); // 30 Days Validity
+        expiresAt.setDate(now.getDate() + validityDays);
 
-        // Create Ad
-        const newAd = await prisma.ad.create({
-            data: {
-                title,
-                description,
-                price: parseFloat(price) || 0,
-                categoryId,
-                subcategoryId,
-                userId: user.id,
-                condition,
-                location,
-                images: JSON.stringify(images || []),
-                dynamicData: dynamicData ? JSON.stringify(dynamicData) : null,
-                includedItems: includedItems ? JSON.stringify(includedItems) : null,
-                videoUrl,
-                mapUrl,
-                isB2B: !!isB2B,
-                b2bMoq: isB2B ? parseInt(b2bMoq) : null,
-                b2bPricePerUnit: isB2B ? parseFloat(b2bPricePerUnit) : null,
-                b2bStock: isB2B && b2bStock ? parseInt(b2bStock) : null,
-                b2bBusinessName: isB2B ? b2bBusinessName : null,
-                b2bGstNumber: isB2B ? b2bGstNumber : null,
-                b2bDelivery: isB2B ? !!b2bDelivery : null,
-                expiresAt,
-                status: 'active'
+        // Transactions
+        let newAd;
+        await prisma.$transaction(async (tx) => {
+            // Deduct Wallet
+            if (priceToDeduct > 0) {
+                await tx.user.update({
+                    where: { id: user.id },
+                    data: { walletBalance: { decrement: priceToDeduct } }
+                });
             }
-        });
 
-        // Increment adsPosted counter
-        await prisma.user.update({
-            where: { id: user.id },
-            data: { adsPosted: { increment: 1 } }
+            // Create Ad
+            newAd = await tx.ad.create({
+                data: {
+                    title,
+                    description,
+                    price: parseFloat(price) || 0,
+                    categoryId,
+                    subcategoryId,
+                    userId: user.id,
+                    condition,
+                    location,
+                    images: JSON.stringify(images || []),
+                    dynamicData: dynamicData ? JSON.stringify(dynamicData) : null,
+                    includedItems: includedItems ? JSON.stringify(includedItems) : null,
+                    videoUrl,
+                    mapUrl,
+                    isB2B: !!isB2B,
+                    b2bMoq: isB2B ? parseInt(b2bMoq) : null,
+                    b2bPricePerUnit: isB2B ? parseFloat(b2bPricePerUnit) : null,
+                    b2bStock: isB2B && b2bStock ? parseInt(b2bStock) : null,
+                    b2bBusinessName: isB2B ? b2bBusinessName : null,
+                    b2bGstNumber: isB2B ? b2bGstNumber : null,
+                    b2bDelivery: isB2B ? !!b2bDelivery : null,
+                    expiresAt,
+                    status: adStatus, // Uses dynamic status for flagged ads
+                    validityDays,
+                    pricePaid: priceToDeduct,
+                    adPlanType
+                }
+            });
+
+            // Log Wallet Transaction
+            if (priceToDeduct > 0) {
+                await tx.walletTransaction.create({
+                    data: {
+                        userId: user.id,
+                        amount: priceToDeduct,
+                        type: 'deduction',
+                        description: `Ad posting fee for "${title}"`,
+                        adId: newAd.id
+                    }
+                });
+            }
+
+            // Increment adsPosted counter
+            await tx.user.update({
+                where: { id: user.id },
+                data: { adsPosted: { increment: 1 } }
+            });
         });
 
         res.json({ message: 'Ad posted successfully!', ad: newAd, adsPosted: user.adsPosted + 1 });
@@ -372,9 +451,9 @@ app.post('/api/ads/post', authenticate, async (req, res) => {
 // Create Razorpay Order
 app.post('/api/payment/create-order', authenticate, async (req, res) => {
     try {
-        const reqAmount = req.body.amount || 20;
-        if (reqAmount < 20) {
-            return res.status(400).json({ error: 'Minimum recharge amount is ₹20.' });
+        const reqAmount = req.body.amount || 49;
+        if (reqAmount < 49) {
+            return res.status(400).json({ error: 'Minimum recharge amount is ₹49.' });
         }
         const amount = reqAmount * 100; // in paise
 

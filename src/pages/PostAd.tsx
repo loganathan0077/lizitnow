@@ -12,6 +12,7 @@ export interface Category {
     name: string;
     slug: string;
     subcategories: Subcategory[];
+    pricing?: { price: number; validityDays: number; };
 }
 
 export interface Subcategory {
@@ -92,11 +93,11 @@ const DEFAULT_SUBCATGORY_IMG = 'https://images.unsplash.com/photo-1600880292203-
 
 const PostAd = () => {
     const navigate = useNavigate();
-    const [isMember, setIsMember] = useState(false);
     const [isVerified, setIsVerified] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [adsPostedCount, setAdsPostedCount] = useState(0);
+    const [walletBalance, setWalletBalance] = useState(0);
 
     const [categories, setCategories] = useState<Category[]>([]);
 
@@ -159,9 +160,8 @@ const PostAd = () => {
                 if (res.ok) {
                     setIsVerified(true); // User is authenticated
                     const user = data.user;
-                    const hasActiveMembership = user.membershipExpiry && new Date(user.membershipExpiry) > new Date();
-                    setIsMember(hasActiveMembership);
                     setAdsPostedCount(user.adsPosted || 0);
+                    setWalletBalance(user.walletBalance || 0);
                 } else {
                     localStorage.removeItem('token');
                     localStorage.removeItem('isAuthenticated');
@@ -200,9 +200,9 @@ const PostAd = () => {
             return;
         }
 
-        if (!isMember && adsPostedCount >= 5) {
-            toast.error('Membership Required', {
-                description: 'You have used your 5 free ads. Please purchase a membership to continue posting.',
+        if (walletBalance < currentListingFee) {
+            toast.error('Insufficient Wallet Balance', {
+                description: `This ad requires ₹${currentListingFee}. Please recharge your wallet.`,
             });
             return;
         }
@@ -265,15 +265,14 @@ const PostAd = () => {
                             <ShieldAlert className="h-10 w-10 text-destructive" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold font-display text-foreground mb-2">Membership Required</h1>
+                            <h1 className="text-2xl font-bold font-display text-foreground mb-2">Login Required</h1>
                             <p className="text-muted-foreground">
-                                To maintain a safe marketplace, only paid members can post listings on Liztitnow.com.
+                                Please login to your account to post an ad on Liztitnow.com.
                             </p>
                         </div>
                         <Button variant="accent" size="lg" className="w-full" asChild>
-                            <Link to="/dashboard">
-                                <BadgeCheck className="h-5 w-5 mr-2" />
-                                Buy Membership (₹100)
+                            <Link to="/login">
+                                Login / Register
                             </Link>
                         </Button>
                         <Button variant="ghost" asChild>
@@ -284,6 +283,20 @@ const PostAd = () => {
                 <Footer />
             </div>
         );
+    }
+
+    // Dynamic Pricing Calculation
+    const selectedCategory = categories.find(c => c.id === formData.categoryId);
+    const isServiceOrEvent = selectedCategory && ['services', 'events', 'event-services'].includes(selectedCategory.slug);
+
+    let currentListingFee = selectedCategory?.pricing?.price ?? 10;
+    let currentValidityDays = selectedCategory?.pricing?.validityDays ?? 30;
+    let isLaunchOffer = false;
+
+    if (!isServiceOrEvent && adsPostedCount < 32) {
+        currentListingFee = adsPostedCount < 2 ? 0 : 1;
+        currentValidityDays = 30;
+        isLaunchOffer = true;
     }
 
     const isJobCategory = categories.find(c => c.id === formData.categoryId)?.slug === 'jobs';
@@ -696,17 +709,17 @@ const PostAd = () => {
                                                 variant="accent"
                                                 size="lg"
                                                 className="w-full"
-                                                disabled={isSubmitting || (!isMember && adsPostedCount >= 5)}
+                                                disabled={isSubmitting || walletBalance < currentListingFee}
                                             >
                                                 {isSubmitting ? (
                                                     <>
                                                         <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                                                        Posting Ad...
+                                                        Processing...
                                                     </>
                                                 ) : (
                                                     <>
-                                                        Post Ad Now
-                                                        <BadgeCheck className="h-5 w-5 ml-2" />
+                                                        Pay ₹{currentListingFee} & Post Ad
+                                                        <CheckCircle2 className="h-5 w-5 ml-2" />
                                                     </>
                                                 )}
                                             </Button>
@@ -725,40 +738,45 @@ const PostAd = () => {
                                             <span className="text-muted-foreground flex items-center gap-2 shrink-0 pt-0.5">
                                                 <Calendar className="h-4 w-4" /> Validity
                                             </span>
-                                            <span className="font-medium text-foreground text-right">30 Days</span>
+                                            <span className="font-medium text-foreground text-right">{currentValidityDays} Days</span>
                                         </div>
                                         <div className="flex items-start justify-between text-sm">
                                             <span className="text-muted-foreground flex items-center gap-2 shrink-0 pt-0.5">
-                                                <Coins className="h-4 w-4" /> Cost
+                                                <Coins className="h-4 w-4" /> Listing Fee
                                             </span>
                                             <span className="font-medium text-foreground text-right pl-2">
-                                                {isMember ? 'Included (Unlimited)' : (adsPostedCount < 5 ? `Free (${adsPostedCount}/5 used)` : '₹100 (Membership Required)')}
+                                                {currentListingFee === 0 ? <span className="text-trust-green font-bold">FREE</span> : `₹${currentListingFee}`}
                                             </span>
                                         </div>
+                                        {isLaunchOffer && (
+                                            <div className="text-xs text-primary bg-primary/10 p-2 rounded-md">
+                                                ⭐ Launch Offer Applied! ({adsPostedCount < 2 ? `Ad ${adsPostedCount + 1} of 2 free` : `Ad ${adsPostedCount + 1} of 32 for ₹1`})
+                                            </div>
+                                        )}
                                         <div className="h-px bg-border my-2" />
                                         <div className="flex items-start justify-between text-sm">
                                             <span className="text-muted-foreground flex items-center gap-2 shrink-0">
-                                                <BadgeCheck className="h-4 w-4" /> Membership
+                                                <BadgeCheck className="h-4 w-4" /> Wallet Balance
                                             </span>
-                                            <span className={`font-bold text-right ${!isMember ? 'text-destructive' : 'text-trust-green'}`}>
-                                                {isMember ? 'Active' : 'Free Tier'}
+                                            <span className={`font-bold text-right ${walletBalance < currentListingFee ? 'text-destructive' : 'text-trust-green'}`}>
+                                                ₹{walletBalance.toFixed(2)}
                                             </span>
                                         </div>
                                     </div>
 
-                                    {!isMember && adsPostedCount >= 5 && (
+                                    {walletBalance < currentListingFee && (
                                         <div className="p-3 bg-destructive/10 rounded-lg text-sm text-destructive mb-4">
-                                            You have used your 5 free ads. Purchase a 6-month membership to continue posting.
+                                            Insufficient wallet balance. Please go to your dashboard and recharge to post this ad.
                                         </div>
                                     )}
 
                                     <div className="bg-secondary/50 p-4 rounded-xl">
-                                        <h4 className="font-medium text-sm text-foreground mb-2">Liztitnow Posting Rules</h4>
+                                        <h4 className="font-medium text-sm text-foreground mb-2">Liztitnow Ad Guidelines</h4>
                                         <ul className="text-xs text-muted-foreground space-y-2 list-disc list-inside">
-                                            <li>Ads are valid for 30 days only.</li>
-                                            <li>No lifetime ads allowed.</li>
-                                            <li>Spamming will lead to a ban.</li>
-                                            <li>Verified sellers only.</li>
+                                            <li>Validity depends on the category plan.</li>
+                                            <li>Posting fees are deducted from your Wallet directly.</li>
+                                            <li>Spamming will lead to an immediate ban.</li>
+                                            <li>Ensure correct category selection to avoid delisting.</li>
                                         </ul>
                                     </div>
                                 </div>

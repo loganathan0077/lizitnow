@@ -88,7 +88,7 @@ const Dashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
-  const [ads, setAds] = useState(mockAds);
+  const [ads, setAds] = useState<any[]>([]);
   const [wishlist, setWishlist] = useState(mockWishlistItems);
 
   // Settings State
@@ -122,6 +122,24 @@ const Dashboard = () => {
   // Recharge Modal State
   const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
   const [rechargeAmount, setRechargeAmount] = useState<number | ''>(50);
+
+  useEffect(() => {
+    if (isAdsView && user) {
+      const fetchAds = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const res = await fetch('http://localhost:5001/api/user/ads', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (res.ok) setAds(data.ads);
+        } catch (e) {
+          console.error(e);
+        }
+      };
+      fetchAds();
+    }
+  }, [isAdsView, user]);
 
   useEffect(() => {
     if (isBillingView && user) {
@@ -194,9 +212,26 @@ const Dashboard = () => {
     });
   };
 
+  const handleDeleteAd = async (e: React.MouseEvent, adId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this listing? Re-posting will require a new fee (No refunds).")) {
+      setAds(prevAds => prevAds.filter(ad => ad.id !== adId));
+      toast.success("Listing deleted successfully");
+    }
+  };
+
+  const calculateDaysRemaining = (expiresAt: string) => {
+    const end = new Date(expiresAt);
+    const now = new Date();
+    const diffTime = end.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
+  };
+
   const handleRechargeSubmit = async () => {
-    if (!rechargeAmount || rechargeAmount < 20) {
-      toast.error('Minimum recharge amount is ₹20');
+    if (!rechargeAmount || rechargeAmount < 49) {
+      toast.error('Minimum recharge amount is ₹49');
       return;
     }
     try {
@@ -483,52 +518,96 @@ const Dashboard = () => {
 
                   {/* Ads List */}
                   <div className="card-premium overflow-hidden">
-                    <div className="p-4 border-b border-border">
+                    <div className="p-4 border-b border-border flex justify-between items-center">
                       <h3 className="font-display font-semibold">Your Listings</h3>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link to="/post">Post New Ad</Link>
+                      </Button>
                     </div>
                     <div className="divide-y divide-border">
-                      {ads.map((ad) => {
+                      {ads.length === 0 ? (
+                        <div className="p-8 text-center text-muted-foreground">You have not posted any ads yet.</div>
+                      ) : ads.map((ad: any) => {
                         const StatusIcon = statusIcons[ad.status as keyof typeof statusIcons] || CheckCircle;
+                        const daysLeft = ad.expiresAt ? calculateDaysRemaining(ad.expiresAt) : 0;
+
                         return (
                           <Link
                             to={`/listing/${ad.id}`}
                             key={ad.id}
                             className="p-4 flex flex-col md:flex-row md:items-center justify-between hover:bg-muted/50 transition-colors gap-4 block"
                           >
-                            <div className="flex items-center gap-4">
-                              <div className="w-16 h-12 rounded-lg bg-secondary shrink-0" />
-                              <div>
+                            <div className="flex items-center gap-4 flex-1">
+                              <div className="w-16 h-12 rounded-lg bg-secondary shrink-0 overflow-hidden">
+                                {ad.images && typeof ad.images === 'string' && JSON.parse(ad.images).length > 0 ? (
+                                  <img src={JSON.parse(ad.images)[0]} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full bg-muted flex items-center justify-center text-xs">No img</div>
+                                )}
+                              </div>
+                              <div className="flex-1">
                                 <div className="font-medium text-foreground hover:underline">{ad.title}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  ₹{ad.price.toLocaleString()}
+                                <div className="text-sm text-muted-foreground flex gap-3 flex-wrap mt-1">
+                                  <span className="font-semibold text-foreground">₹{ad.price.toLocaleString()}</span>
+                                  {ad.expiresAt && (
+                                    <span>Expires: {new Date(ad.expiresAt).toLocaleDateString()}</span>
+                                  )}
+                                  {ad.status === 'active' && daysLeft !== null && (
+                                    <span className={daysLeft <= 3 ? "text-destructive font-bold" : "text-amber font-medium"}>
+                                      {daysLeft} Days left
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center gap-4 self-end md:self-auto">
-                              {ad.status === 'active' && (
-                                <>
-                                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                    <TrendingUp className="h-4 w-4" />
-                                    {ad.views} views
-                                  </div>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="hidden md:flex h-8 gap-1"
-                                    onClick={(e) => handleMarkAsSold(e, ad.id)}
-                                  >
-                                    <BadgeCheck className="h-3.5 w-3.5" />
-                                    Mark Sold
-                                  </Button>
-                                </>
-                              )}
+                            <div className="flex items-center gap-3 self-end md:self-auto shrink-0 flex-wrap justify-end">
                               <span className={cn(
                                 "flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium capitalize whitespace-nowrap",
-                                statusColors[ad.status as keyof typeof statusColors]
+                                statusColors[ad.status as keyof typeof statusColors] || 'text-foreground border'
                               )}>
                                 <StatusIcon className="h-3.5 w-3.5" />
                                 {ad.status}
                               </span>
+
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 text-destructive border-destructive/20 hover:bg-destructive/10"
+                                onClick={(e) => handleDeleteAd(e, ad.id)}
+                              >
+                                Delete
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8"
+                                onClick={(e) => { e.preventDefault(); navigate(`/post?edit=${ad.id}`); }}
+                              >
+                                Edit
+                              </Button>
+
+                              {(ad.status === 'expired' || daysLeft <= 3) && (
+                                <Button
+                                  size="sm"
+                                  variant="accent"
+                                  className="h-8"
+                                  onClick={(e) => { e.preventDefault(); toast.info("Renewal feature ready."); }}
+                                >
+                                  Renew Now
+                                </Button>
+                              )}
+
+                              {ad.status === 'active' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 gap-1"
+                                  onClick={(e) => handleMarkAsSold(e, ad.id)}
+                                >
+                                  <BadgeCheck className="h-3.5 w-3.5" />
+                                  Mark Sold
+                                </Button>
+                              )}
                             </div>
                           </Link>
                         );
@@ -557,7 +636,7 @@ const Dashboard = () => {
 
                     <p className="text-sm text-muted-foreground max-w-md mx-auto">
                       Recharge your wallet to take advantage of our Launch Offer.
-                      Post up to 30 ads at just ₹1 per ad! Minimum recharge is ₹20.
+                      Post up to 30 ads at just ₹1 per ad! Minimum recharge is ₹49.
                     </p>
                     <Button variant="accent" size="lg" className="min-w-[200px]" onClick={() => setIsRechargeModalOpen(true)}>
                       Recharge Wallet
@@ -931,19 +1010,19 @@ const Dashboard = () => {
                   <Input
                     id="amount"
                     type="number"
-                    min="20"
+                    min="49"
                     className="pl-8 text-lg font-bold"
                     value={rechargeAmount}
                     onChange={(e) => setRechargeAmount(e.target.value === '' ? '' : Number(e.target.value))}
                   />
                 </div>
-                {rechargeAmount !== '' && rechargeAmount < 20 && (
-                  <p className="text-xs text-destructive mt-1">Minimum recharge amount is ₹20.</p>
+                {rechargeAmount !== '' && rechargeAmount < 49 && (
+                  <p className="text-xs text-destructive mt-1">Minimum recharge amount is ₹49.</p>
                 )}
               </div>
 
               <div className="grid grid-cols-3 gap-2 py-2">
-                {[20, 50, 100].map(amt => (
+                {[49, 99, 199].map(amt => (
                   <Button
                     key={amt}
                     type="button"
@@ -959,7 +1038,7 @@ const Dashboard = () => {
                 variant="accent"
                 className="w-full mt-2 text-lg h-12"
                 onClick={handleRechargeSubmit}
-                disabled={rechargeAmount === '' || rechargeAmount < 20}
+                disabled={rechargeAmount === '' || rechargeAmount < 49}
               >
                 Proceed to Pay {rechargeAmount ? `₹${rechargeAmount}` : ''}
               </Button>
