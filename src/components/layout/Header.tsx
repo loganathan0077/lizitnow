@@ -160,7 +160,7 @@ const Header = () => {
 
           {/* Search Bar - Desktop */}
           <div className="hidden md:flex flex-1 max-w-2xl mx-12 relative">
-            <div className="relative w-full flex items-center bg-background rounded-sm shadow-sm overflow-hidden h-10 focus-within:ring-2 focus-within:ring-primary-foreground/50 transition-all">
+            <div className="relative w-full flex items-center bg-background rounded-lg border-2 border-primary/30 shadow-sm overflow-hidden h-10 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
               <div className="w-[150px] border-r border-border/40 bg-muted/30 flex-shrink-0">
                 <LocationFilter
                   value={selectedLocation}
@@ -212,80 +212,82 @@ const Header = () => {
               <Search className="h-5 w-5" />
             </Button>
 
-            {/* Notifications */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative hover:bg-secondary text-foreground group">
-                  <Bell className="h-5 w-5 group-hover:text-primary transition-colors" />
-                  {unreadCount > 0 && (
-                    <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white border-2 border-background">
-                      {unreadCount}
-                    </span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80 md:w-96 p-0" align="end" sideOffset={8}>
-                <div className="flex items-center justify-between p-4 border-b border-border bg-card">
-                  <h3 className="font-semibold text-foreground">Notifications</h3>
-                  {unreadCount > 0 && (
-                    <button
-                      onClick={markAllAsRead}
-                      className="text-xs text-primary hover:underline font-medium"
-                    >
-                      Mark all as read
-                    </button>
-                  )}
-                </div>
-                <div className="max-h-[65vh] overflow-y-auto bg-card">
-                  {notifications.length > 0 ? (
-                    <div className="flex flex-col">
-                      {notifications.map((notif) => (
-                        <div
-                          key={notif.id}
-                          onClick={() => handleNotificationClick(notif.id, notif.link)}
-                          className={`flex items-start gap-4 p-4 border-b border-border transition-colors hover:bg-muted/50 cursor-pointer ${!notif.read ? 'bg-primary/5' : ''}`}
-                        >
-                          <div className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${notif.type === 'success' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' :
+            {/* Notifications - Only show when logged in */}
+            {isAuthenticated && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative hover:bg-secondary text-foreground group">
+                    <Bell className="h-5 w-5 group-hover:text-primary transition-colors" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white border-2 border-background">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 md:w-96 p-0" align="end" sideOffset={8}>
+                  <div className="flex items-center justify-between p-4 border-b border-border bg-card">
+                    <h3 className="font-semibold text-foreground">Notifications</h3>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={markAllAsRead}
+                        className="text-xs text-primary hover:underline font-medium"
+                      >
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-[65vh] overflow-y-auto bg-card">
+                    {notifications.length > 0 ? (
+                      <div className="flex flex-col">
+                        {notifications.map((notif) => (
+                          <div
+                            key={notif.id}
+                            onClick={() => handleNotificationClick(notif.id, notif.link)}
+                            className={`flex items-start gap-4 p-4 border-b border-border transition-colors hover:bg-muted/50 cursor-pointer ${!notif.read ? 'bg-primary/5' : ''}`}
+                          >
+                            <div className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${notif.type === 'success' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' :
                               notif.type === 'message' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' :
                                 notif.type === 'sale' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' :
                                   'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-                            }`}>
-                            {notif.type === 'success' && <CheckCircle2 className="h-4 w-4" />}
-                            {notif.type === 'message' && <MessageSquare className="h-4 w-4" />}
-                            {notif.type === 'sale' && <ShoppingBag className="h-4 w-4" />}
-                            {notif.type === 'alert' && <CreditCard className="h-4 w-4" />}
+                              }`}>
+                              {notif.type === 'success' && <CheckCircle2 className="h-4 w-4" />}
+                              {notif.type === 'message' && <MessageSquare className="h-4 w-4" />}
+                              {notif.type === 'sale' && <ShoppingBag className="h-4 w-4" />}
+                              {notif.type === 'alert' && <CreditCard className="h-4 w-4" />}
+                            </div>
+                            <div className="flex-1 space-y-1">
+                              <p className={`text-sm ${!notif.read ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
+                                {notif.message}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {notif.time}
+                              </p>
+                            </div>
+                            {!notif.read && (
+                              <div className="w-2 h-2 mt-2 rounded-full bg-trust-blue flex-shrink-0"></div>
+                            )}
                           </div>
-                          <div className="flex-1 space-y-1">
-                            <p className={`text-sm ${!notif.read ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
-                              {notif.message}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {notif.time}
-                            </p>
-                          </div>
-                          {!notif.read && (
-                            <div className="w-2 h-2 mt-2 rounded-full bg-trust-blue flex-shrink-0"></div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-8 text-center flex flex-col items-center justify-center text-muted-foreground bg-card">
-                      <BellRing className="h-8 w-8 mb-3 opacity-20" />
-                      <p className="font-medium">No notifications yet</p>
-                      <p className="text-sm mt-1">Start posting ads to receive updates.</p>
-                    </div>
-                  )}
-                </div>
-                <div className="p-2 border-t border-border bg-muted/20">
-                  <Link to="/dashboard" onClick={() => document.body.click()}>
-                    <Button variant="ghost" className="w-full text-xs font-medium justify-center h-8">
-                      View All Notifications
-                    </Button>
-                  </Link>
-                </div>
-              </PopoverContent>
-            </Popover>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-8 text-center flex flex-col items-center justify-center text-muted-foreground bg-card">
+                        <BellRing className="h-8 w-8 mb-3 opacity-20" />
+                        <p className="font-medium">No notifications yet</p>
+                        <p className="text-sm mt-1">Start posting ads to receive updates.</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-2 border-t border-border bg-muted/20">
+                    <Link to="/dashboard" onClick={() => document.body.click()}>
+                      <Button variant="ghost" className="w-full text-xs font-medium justify-center h-8">
+                        View All Notifications
+                      </Button>
+                    </Link>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
 
             {/* Post Ad Button */}
             <Link to="/post-ad" className="shrink-0">

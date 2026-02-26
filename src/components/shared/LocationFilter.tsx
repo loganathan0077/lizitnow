@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Check, MapPin, ChevronsUpDown } from "lucide-react"
+import { Check, MapPin, ChevronsUpDown, Crosshair, Loader2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -27,10 +27,44 @@ interface LocationFilterProps {
 
 export function LocationFilter({ value, onChange, className, placeholder = "Select location" }: LocationFilterProps) {
     const [open, setOpen] = React.useState(false)
+    const [detecting, setDetecting] = React.useState(false)
 
-    // Filter out "All Locations" for the list if desired, or keep it. 
-    // Let's keep it but maybe treat it specially if needed.
-    // For now, just map all locations.
+    const detectCurrentLocation = async () => {
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser.")
+            return
+        }
+        setDetecting(true)
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                try {
+                    const { latitude, longitude } = position.coords
+                    const res = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`
+                    )
+                    const data = await res.json()
+                    const city =
+                        data.address?.city ||
+                        data.address?.town ||
+                        data.address?.village ||
+                        data.address?.county ||
+                        data.address?.state ||
+                        "Unknown"
+                    onChange(city)
+                    setOpen(false)
+                } catch {
+                    alert("Could not detect your location. Please try again.")
+                } finally {
+                    setDetecting(false)
+                }
+            },
+            () => {
+                alert("Location access denied. Please enable location permissions.")
+                setDetecting(false)
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        )
+    }
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -53,6 +87,21 @@ export function LocationFilter({ value, onChange, className, placeholder = "Sele
             <PopoverContent className="w-[300px] p-0" align="start">
                 <Command>
                     <CommandInput placeholder="Search location..." />
+                    {/* Current Location Button */}
+                    <div className="px-2 pt-2 pb-1">
+                        <button
+                            onClick={detectCurrentLocation}
+                            disabled={detecting}
+                            className="flex items-center gap-2 w-full px-3 py-2.5 text-sm font-medium rounded-md bg-primary/5 hover:bg-primary/10 text-primary transition-colors disabled:opacity-50 disabled:cursor-wait"
+                        >
+                            {detecting ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <Crosshair className="h-4 w-4" />
+                            )}
+                            {detecting ? "Detecting location..." : "📍 Use Current Location"}
+                        </button>
+                    </div>
                     <CommandList>
                         <CommandEmpty>No location found.</CommandEmpty>
                         <CommandGroup>
@@ -81,3 +130,4 @@ export function LocationFilter({ value, onChange, className, placeholder = "Sele
         </Popover>
     )
 }
+
