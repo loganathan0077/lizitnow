@@ -132,7 +132,7 @@ const Dashboard = () => {
 
   // Recharge Modal State
   const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
-  const [rechargeAmount, setRechargeAmount] = useState<number | ''>(50);
+  const [rechargeAmount, setRechargeAmount] = useState<number | ''>(1);
 
   useEffect(() => {
     if (isAdsView && user) {
@@ -264,56 +264,16 @@ const Dashboard = () => {
     return diffDays > 0 ? diffDays : 0;
   };
 
-  const handleRechargeSubmit = async () => {
-    if (!rechargeAmount || rechargeAmount < 49) {
-      toast.error('Minimum recharge amount is ₹49');
+  const handleRechargeSubmit = () => {
+    if (!rechargeAmount || rechargeAmount < 1) {
+      toast.error('Minimum recharge amount is ₹1');
       return;
     }
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/api/payment/create-order`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ amount: Number(rechargeAmount) })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to create order');
-
-      const options = {
-        key: 'rzp_test_mock_key',
-        amount: data.amount,
-        currency: data.currency,
-        name: 'Liztitnow.com',
-        description: 'Wallet Recharge',
-        order_id: data.orderId,
-        handler: async function (response: any) {
-          const verifyRes = await fetch(`${API_BASE}/api/payment/verify`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id || 'mock_pay_id',
-              razorpay_signature: response.razorpay_signature || 'mock_signature'
-            })
-          });
-          const verifyData = await verifyRes.json();
-          if (verifyRes.ok) {
-            toast.success('Wallet Recharged Successfully!');
-            setIsRechargeModalOpen(false);
-            setUser((prev: any) => ({ ...prev, walletBalance: verifyData.walletBalance }));
-          } else {
-            toast.error('Payment verification failed');
-          }
-        },
-      };
-      const rzp = new (window as any).Razorpay(options);
-      rzp.open();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to initiate payment');
-    }
+    // Open Razorpay payment link in a new tab with amount pre-filled
+    const paymentUrl = `https://razorpay.me/@shermonindustries?amount=${Number(rechargeAmount) * 100}`;
+    window.open(paymentUrl, '_blank');
+    toast.info('Payment page opened in a new tab. Complete the payment there.');
+    setIsRechargeModalOpen(false);
   };
 
   const handleRemoveFromWishlist = async (adId: string) => {
@@ -1206,7 +1166,7 @@ const Dashboard = () => {
             </div>
 
             <p className="text-muted-foreground mb-6">
-              Add funds to your wallet to post ads at just ₹1 per ad!
+              Add funds to your wallet. You'll be redirected to Razorpay to complete the payment.
             </p>
 
             <div className="space-y-4">
@@ -1217,19 +1177,19 @@ const Dashboard = () => {
                   <Input
                     id="amount"
                     type="number"
-                    min="49"
+                    min="1"
                     className="pl-8 text-lg font-bold"
                     value={rechargeAmount}
                     onChange={(e) => setRechargeAmount(e.target.value === '' ? '' : Number(e.target.value))}
                   />
                 </div>
-                {rechargeAmount !== '' && rechargeAmount < 49 && (
-                  <p className="text-xs text-destructive mt-1">Minimum recharge amount is ₹49.</p>
+                {rechargeAmount !== '' && rechargeAmount < 1 && (
+                  <p className="text-xs text-destructive mt-1">Minimum recharge amount is ₹1.</p>
                 )}
               </div>
 
               <div className="grid grid-cols-3 gap-2 py-2">
-                {[49, 99, 199].map(amt => (
+                {[1, 5, 10].map(amt => (
                   <Button
                     key={amt}
                     type="button"
@@ -1245,10 +1205,14 @@ const Dashboard = () => {
                 variant="accent"
                 className="w-full mt-2 text-lg h-12"
                 onClick={handleRechargeSubmit}
-                disabled={rechargeAmount === '' || rechargeAmount < 49}
+                disabled={rechargeAmount === '' || rechargeAmount < 1}
               >
                 Proceed to Pay {rechargeAmount ? `₹${rechargeAmount}` : ''}
               </Button>
+
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                Powered by Razorpay • Secure Payment
+              </p>
             </div>
           </div>
         </div>
