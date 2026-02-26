@@ -837,12 +837,12 @@ const Dashboard = () => {
                                 {invoice.status}
                               </span>
                               <Button size="sm" variant="outline" className="gap-2" asChild>
-                                <a href={`${API_BASE}/api/invoices/${invoice.id}/download?token=${localStorage.getItem(`token')}&action=view`} target="_blank" rel="noreferrer">
+                                <a href={`${API_BASE}/api/invoices/${invoice.id}/download?token=${localStorage.getItem('token')}&action=view`} target="_blank" rel="noreferrer">
                                   <Eye className="h-4 w-4" /> View
                                 </a>
                               </Button>
                               <Button size="sm" variant="outline" className="gap-2" asChild>
-                                <a href={`${API_BASE}/api/invoices/${invoice.id}/download?token=${localStorage.getItem(`token')}&action=download`} target="_blank" rel="noreferrer">
+                                <a href={`${API_BASE}/api/invoices/${invoice.id}/download?token=${localStorage.getItem('token')}&action=download`} target="_blank" rel="noreferrer">
                                   <Download className="h-4 w-4" /> Download
                                 </a>
                               </Button>

@@ -57,9 +57,9 @@ const mockSellerData: Seller = { // Renamed to mockSellerData to distinguish fro
     ],
     isVerifiedMobile: true,
     isVerifiedEmail: true,
-    facebookUrl: 'https://facebook.com/rahulsharma`,
-    instagramUrl: 'https://instagram.com/rahul.sharma`,
-    twitterUrl: 'https://twitter.com/rahul_trades`
+    facebookUrl: 'https://facebook.com/rahulsharma',
+    instagramUrl: 'https://instagram.com/rahul.sharma',
+    twitterUrl: 'https://twitter.com/rahul_trades'
 };
 
 const SellerProfile = () => {
