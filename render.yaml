@@ -4,8 +4,8 @@ services:
     env: node
     region: singapore
     rootDir: server
-    buildCommand: npm install && npx prisma generate && node seed.js
-    startCommand: node index.js
+    buildCommand: npm install
+    startCommand: npx prisma migrate deploy && node seed.js && node index.js
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -15,8 +15,6 @@ services:
         generateValue: true
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 5001
 
 databases:
   - name: liyztit-db
