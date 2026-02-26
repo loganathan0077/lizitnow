@@ -559,17 +559,23 @@ app.post('/api/payment/create-order', authenticate, async (req, res) => {
 app.post('/api/payment/verify', authenticate, async (req, res) => {
     try {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+        console.log('[verify] Received:', { razorpay_order_id, razorpay_payment_id });
 
         const payment = await prisma.payment.findUnique({ where: { razorpayOrderId: razorpay_order_id } });
-        if (!payment) return res.status(404).json({ error: 'Order not found' });
+        if (!payment) {
+            console.log('[verify] Order not found:', razorpay_order_id);
+            return res.status(404).json({ error: 'Order not found' });
+        }
+        console.log('[verify] Payment found:', payment.id, 'amount:', payment.amount);
 
-        let isSignatureValid = false;
-
+        // Use the same secret as the Razorpay instance (with fallback)
+        const keySecret = process.env.RAZORPAY_KEY_SECRET || 'jZmMEEfXwRbXTtRg5UGWvKvZ';
         const generated_signature = crypto
-            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+            .createHmac('sha256', keySecret)
             .update(`${razorpay_order_id}|${razorpay_payment_id}`)
             .digest('hex');
-        isSignatureValid = generated_signature === razorpay_signature;
+        const isSignatureValid = generated_signature === razorpay_signature;
+        console.log('[verify] Signature valid:', isSignatureValid);
 
         if (!isSignatureValid) {
             await prisma.payment.update({
@@ -592,7 +598,7 @@ app.post('/api/payment/verify', authenticate, async (req, res) => {
         const gstAmount = totalAmount - baseAmount;
         const cgst = gstAmount / 2;
         const sgst = gstAmount / 2;
-        const igst = 0; // Assuming intra-state for now
+        const igst = 0;
 
         // Get User to check GSTIN
         const userForInvoice = await prisma.user.findUnique({ where: { id: req.user.userId } });
@@ -609,7 +615,7 @@ app.post('/api/payment/verify', authenticate, async (req, res) => {
                 cgst,
                 sgst,
                 igst,
-                gstinUsed: userForInvoice.gstin || null
+                gstinUsed: userForInvoice?.gstin || null
             }
         });
 
@@ -623,10 +629,11 @@ app.post('/api/payment/verify', authenticate, async (req, res) => {
             }
         });
 
+        console.log('[verify] ✅ Success! New balance:', updatedUser.walletBalance);
         res.json({ message: 'Wallet recharged successfully!', walletBalance: updatedUser.walletBalance });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error('[verify] ❌ Error:', error.message, error.stack);
+        res.status(500).json({ error: `Server error: ${error.message}` });
     }
 });
 
