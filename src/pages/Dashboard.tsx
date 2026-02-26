@@ -134,6 +134,9 @@ const Dashboard = () => {
   const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
   const [rechargeAmount, setRechargeAmount] = useState<number | ''>(1);
 
+  // Payment result modal
+  const [paymentResult, setPaymentResult] = useState<{ type: 'success' | 'error'; amount?: number; balance?: number; message?: string } | null>(null);
+
   useEffect(() => {
     if (isAdsView && user) {
       const fetchAds = async () => {
@@ -306,14 +309,13 @@ const Dashboard = () => {
             const verifyData = await verifyRes.json();
             console.log('Verify response:', verifyData);
             if (verifyRes.ok) {
-              alert(`✅ Wallet recharged with ₹${savedAmount}! New balance: ₹${verifyData.walletBalance}`);
-              window.location.reload();
+              setPaymentResult({ type: 'success', amount: savedAmount, balance: verifyData.walletBalance });
             } else {
-              alert(`❌ Payment verification failed: ${verifyData.error || 'Unknown error'}`);
+              setPaymentResult({ type: 'error', message: verifyData.error || 'Payment verification failed' });
             }
           } catch (err) {
             console.error('Verify fetch error:', err);
-            alert('❌ Payment verification failed. Please contact support.');
+            setPaymentResult({ type: 'error', message: 'Payment verification failed. Please contact support.' });
           }
         },
         prefill: {
@@ -1275,6 +1277,86 @@ const Dashboard = () => {
                 Powered by Razorpay • Secure Payment
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Premium Payment Result Modal */}
+      {paymentResult && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="bg-card w-full max-w-sm rounded-2xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-300">
+            {paymentResult.type === 'success' ? (
+              <>
+                {/* Success Header */}
+                <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-8 text-center relative overflow-hidden">
+                  {/* Celebration particles */}
+                  <div className="absolute inset-0 overflow-hidden">
+                    {[...Array(12)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="absolute w-2 h-2 rounded-full animate-ping"
+                        style={{
+                          backgroundColor: ['#fbbf24', '#f472b6', '#60a5fa', '#34d399', '#a78bfa', '#fb923c'][i % 6],
+                          top: `${Math.random() * 100}%`,
+                          left: `${Math.random() * 100}%`,
+                          animationDelay: `${i * 0.15}s`,
+                          animationDuration: '1.5s'
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <div className="relative">
+                    <div className="w-20 h-20 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm ring-4 ring-white/30">
+                      <CheckCircle className="h-10 w-10 text-white" />
+                    </div>
+                    <h2 className="text-2xl font-display font-bold text-white">Payment Successful!</h2>
+                  </div>
+                </div>
+                {/* Success Body */}
+                <div className="p-6 text-center space-y-4">
+                  <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 space-y-2">
+                    <p className="text-sm text-muted-foreground">Amount Recharged</p>
+                    <p className="text-3xl font-display font-bold text-green-600 dark:text-green-400">₹{paymentResult.amount}</p>
+                  </div>
+                  <div className="flex items-center justify-between bg-secondary/50 rounded-xl p-4">
+                    <span className="text-sm font-medium text-muted-foreground">New Wallet Balance</span>
+                    <span className="text-xl font-bold text-foreground">₹{paymentResult.balance}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Your wallet has been credited successfully. You can now post ads!</p>
+                  <Button
+                    variant="accent"
+                    className="w-full h-12 text-base font-semibold rounded-xl"
+                    onClick={() => {
+                      setPaymentResult(null);
+                      window.location.reload();
+                    }}
+                  >
+                    Continue →
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Error Header */}
+                <div className="bg-gradient-to-br from-red-500 to-rose-600 p-8 text-center">
+                  <div className="w-20 h-20 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm ring-4 ring-white/30">
+                    <XCircle className="h-10 w-10 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-display font-bold text-white">Payment Failed</h2>
+                </div>
+                {/* Error Body */}
+                <div className="p-6 text-center space-y-4">
+                  <p className="text-sm text-muted-foreground">{paymentResult.message}</p>
+                  <Button
+                    variant="outline"
+                    className="w-full h-12 text-base font-semibold rounded-xl"
+                    onClick={() => setPaymentResult(null)}
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
