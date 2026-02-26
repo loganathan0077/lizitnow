@@ -24,7 +24,7 @@ import {
   Youtube
 } from 'lucide-react';
 import { listings, formatPrice } from '@/data/mockData';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { toast } from "sonner";
 import ChatSheet from '@/components/messaging/ChatSheet';
@@ -40,6 +40,38 @@ const ListingDetail = () => {
   const [currentImage, setCurrentImage] = useState(0);
   const [isFavorited, setIsFavorited] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
+
+  // Check wishlist status on load
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token || !id) return;
+    fetch(`http://localhost:5001/api/wishlist/status/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => r.json())
+      .then(data => { if (data.isSaved) setIsFavorited(true); })
+      .catch(() => { });
+  }, [id]);
+
+  const toggleWishlist = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Please log in to save items to your wishlist');
+      return;
+    }
+    const method = isFavorited ? 'DELETE' : 'POST';
+    try {
+      const res = await fetch(`http://localhost:5001/api/wishlist/${id}`, {
+        method,
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error();
+      setIsFavorited(!isFavorited);
+      toast.success(isFavorited ? 'Removed from wishlist' : 'Added to wishlist');
+    } catch {
+      toast.error('Failed to update wishlist. Try again.');
+    }
+  };
 
   // Fallback for listings that might be missing in mockData during transition
   const listing = listings.find(l => l.id === id);
@@ -414,10 +446,7 @@ const ListingDetail = () => {
                   <Button
                     variant="outline"
                     size="lg"
-                    onClick={() => {
-                      setIsFavorited(!isFavorited);
-                      toast.success(isFavorited ? "Removed from favorites" : "Added to favorites");
-                    }}
+                    onClick={toggleWishlist}
                     className={cn(
                       "px-3 w-12 shrink-0",
                       isFavorited && "text-destructive border-destructive bg-destructive/5"
@@ -522,17 +551,14 @@ const ListingDetail = () => {
         <Button
           variant="outline"
           size="lg"
-          onClick={() => {
-            setIsFavorited(!isFavorited);
-            toast.success(isFavorited ? "Item Saved" : "Removed from Saved");
-          }}
+          onClick={toggleWishlist}
           className={cn(
             "flex-1 gap-2 font-bold",
             isFavorited && "text-destructive border-destructive bg-destructive/5"
           )}
         >
           <Heart className={cn("h-5 w-5", isFavorited && "fill-current")} />
-          Save
+          {isFavorited ? 'Saved' : 'Save'}
         </Button>
         <Button
           variant="outline"

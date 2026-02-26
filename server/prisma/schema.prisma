@@ -25,6 +25,8 @@ model User {
   facebookUrl      String?
   instagramUrl     String?
   twitterUrl       String?
+  bannerImage      String?
+  avatarUrl        String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -32,6 +34,7 @@ model User {
   referralsMade    Referral[] @relation("Referrer")
   referralsUsed    Referral[] @relation("ReferredUser")
   walletTransactions WalletTransaction[]
+  wishlistItems    Wishlist[]
 }
 
 model Payment {
@@ -150,4 +153,16 @@ model Ad {
   pricePaid        Float    @default(0)
   adPlanType       String   @default("standard") // launch, standard, premium
   walletTransactions WalletTransaction[]
+  wishlistItems    Wishlist[]
+}
+
+model Wishlist {
+  id        String   @id @default(uuid())
+  userId    String
+  adId      String
+  user      User     @relation(fields: [userId], references: [id])
+  ad        Ad       @relation(fields: [adId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, adId])
 }

@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import Header from '@/components/layout/Header';
@@ -37,7 +37,9 @@ import {
   Star,
   CreditCard,
   Download,
-  Eye
+  Eye,
+  Camera,
+  Image as ImageIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -89,7 +91,8 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [ads, setAds] = useState<any[]>([]);
-  const [wishlist, setWishlist] = useState(mockWishlistItems);
+  const [wishlist, setWishlist] = useState<any[]>([]);
+  const [isWishlistLoading, setIsWishlistLoading] = useState(false);
 
   // Settings State
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -106,7 +109,14 @@ const Dashboard = () => {
     twitter: '',
     isGstRegistered: false,
     gstin: '',
+    avatarUrl: '',
+    bannerImage: '',
   });
+
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   // Determine active view based on path
   const currentPath = location.pathname;
@@ -159,6 +169,28 @@ const Dashboard = () => {
     }
   }, [isBillingView, user]);
 
+  // Fetch wishlist
+  useEffect(() => {
+    if (isWishlistView && user) {
+      const fetchWishlist = async () => {
+        setIsWishlistLoading(true);
+        try {
+          const token = localStorage.getItem('token');
+          const res = await fetch('http://localhost:5001/api/wishlist', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (res.ok) setWishlist(data);
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setIsWishlistLoading(false);
+        }
+      };
+      fetchWishlist();
+    }
+  }, [isWishlistView, user]);
+
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -185,7 +217,9 @@ const Dashboard = () => {
             instagram: fetchedUser.instagramUrl || '',
             twitter: fetchedUser.twitterUrl || '',
             isGstRegistered: !!fetchedUser.gstin,
-            gstin: fetchedUser.gstin || ''
+            gstin: fetchedUser.gstin || '',
+            avatarUrl: fetchedUser.avatarUrl || '',
+            bannerImage: fetchedUser.bannerImage || ''
           });
         } else {
           localStorage.removeItem('token');
@@ -281,9 +315,129 @@ const Dashboard = () => {
     }
   };
 
-  const handleRemoveFromWishlist = (id: string) => {
-    setWishlist(prev => prev.filter(item => item.id !== id));
-    toast.info("Item removed from wishlist");
+  const handleRemoveFromWishlist = async (adId: string) => {
+    const token = localStorage.getItem('token');
+    try {
+      await fetch(`http://localhost:5001/api/wishlist/${adId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setWishlist(prev => prev.filter(item => item.adId !== adId));
+      toast.info('Item removed from wishlist');
+    } catch {
+      toast.error('Failed to remove item');
+    }
+  };
+
+  const processImage = (file: File, isAvatar: boolean): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (e) => {
+        const img = new Image();
+        img.src = e.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (isAvatar) {
+            // Square crop 300x300
+            const size = Math.min(width, height);
+            const sx = (width - size) / 2;
+            const sy = (height - size) / 2;
+            canvas.width = 300;
+            canvas.height = 300;
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(img, sx, sy, size, size, 0, 0, 300, 300);
+          } else {
+            // Banner resize to standard width (e.g. max 1200 wide) preserving aspect
+            const MAX_WIDTH = 1200;
+            if (width > MAX_WIDTH) {
+              height = Math.round((height * MAX_WIDTH) / width);
+              width = MAX_WIDTH;
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(img, 0, 0, width, height);
+          }
+          resolve(canvas.toDataURL(file.type || 'image/jpeg', 0.8));
+        };
+        img.onerror = reject;
+      };
+      reader.onerror = reject;
+    });
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Avatar image must be less than 2MB');
+      return;
+    }
+
+    try {
+      setIsUploadingAvatar(true);
+      const base64Image = await processImage(file, true);
+
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5001/api/user/avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ avatarUrl: base64Image })
+      });
+
+      if (res.ok) {
+        setProfileForm(prev => ({ ...prev, avatarUrl: base64Image }));
+        setUser((prev: any) => ({ ...prev, avatarUrl: base64Image }));
+        toast.success('Avatar updated successfully');
+      } else {
+        toast.error('Failed to update avatar');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('An error occurred during upload');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error('Cover image must be less than 3MB');
+      return;
+    }
+
+    try {
+      setIsUploadingBanner(true);
+      const base64Image = await processImage(file, false);
+
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5001/api/user/banner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ bannerImage: base64Image })
+      });
+
+      if (res.ok) {
+        setProfileForm(prev => ({ ...prev, bannerImage: base64Image }));
+        setUser((prev: any) => ({ ...prev, bannerImage: base64Image }));
+        toast.success('Cover image updated successfully');
+      } else {
+        toast.error('Failed to update cover image');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('An error occurred during upload');
+    } finally {
+      setIsUploadingBanner(false);
+    }
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -714,26 +868,46 @@ const Dashboard = () => {
                     <p className="text-muted-foreground">Saved items you are interested in</p>
                   </div>
 
-                  {wishlist.length > 0 ? (
+                  {isWishlistLoading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {wishlist.map(item => (
-                        <div key={item.id} className="card-premium flex gap-4 overflow-hidden group">
-                          <div className={`w-32 bg-secondary ${item.image}`} />
-                          <div className="flex-1 p-4 pl-0 flex flex-col justify-between">
-                            <div>
-                              <div className="text-xs text-muted-foreground mb-1">{item.category}</div>
-                              <h3 className="font-semibold text-lg leading-tight mb-1">{item.title}</h3>
-                              <div className="font-bold text-primary">₹{item.price.toLocaleString()}</div>
+                      {[1, 2, 3].map(n => (
+                        <div key={n} className="card-premium h-36 animate-pulse bg-secondary/60" />
+                      ))}
+                    </div>
+                  ) : wishlist.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {wishlist.map(item => {
+                        const ad = item.ad;
+                        const images = (() => { try { return JSON.parse(ad.images); } catch { return []; } })();
+                        const thumb = images[0];
+                        return (
+                          <div key={item.adId} className="card-premium flex gap-4 overflow-hidden group">
+                            <div className="w-32 shrink-0 bg-secondary overflow-hidden">
+                              {thumb ? (
+                                <img src={thumb} alt={ad.title} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">No img</div>
+                              )}
                             </div>
-                            <div className="flex gap-2 mt-4">
-                              <Button size="sm" className="flex-1">View Details</Button>
-                              <Button size="icon" variant="ghost" onClick={() => handleRemoveFromWishlist(item.id)} className="text-muted-foreground hover:text-destructive">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                            <div className="flex-1 p-4 pl-0 flex flex-col justify-between">
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-1">{ad.category?.name}</div>
+                                <h3 className="font-semibold text-lg leading-tight mb-1">{ad.title}</h3>
+                                <div className="font-bold text-primary">₹{Number(ad.price).toLocaleString()}</div>
+                                {ad.location && <div className="text-xs text-muted-foreground mt-1">{ad.location}</div>}
+                              </div>
+                              <div className="flex gap-2 mt-4">
+                                <Button size="sm" className="flex-1" asChild>
+                                  <Link to={`/listing/${ad.id}`}>View Details</Link>
+                                </Button>
+                                <Button size="icon" variant="ghost" onClick={() => handleRemoveFromWishlist(item.adId)} className="text-muted-foreground hover:text-destructive">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="card-premium p-12 text-center">
@@ -753,156 +927,188 @@ const Dashboard = () => {
                 <div className="max-w-2xl">
                   <div className="mb-6">
                     <h1 className="font-display text-2xl font-bold text-foreground">Edit Profile</h1>
-                    <p className="text-muted-foreground">Update your personal information</p>
+                    <p className="text-muted-foreground">Update your personal information and cover images</p>
                   </div>
 
-                  <div className="card-premium p-6">
-                    <form onSubmit={handleSaveProfile} className="space-y-6">
-                      <div className="flex items-center gap-6 mb-6">
-                        <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center text-3xl font-display text-muted-foreground">
-                          {user.name.charAt(0)}
+                  <div className="card-premium p-0 overflow-hidden mb-6">
+                    {/* Profile Cover Image Upload */}
+                    <div className="relative w-full h-40 md:h-56 bg-muted border-b border-border group overflow-hidden">
+                      {profileForm.bannerImage ? (
+                        <img src={profileForm.bannerImage} alt="Profile Cover" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-r from-slate-200 to-slate-100 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center relative overflow-hidden">
+                          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-300 via-transparent to-transparent dark:from-slate-700"></div>
                         </div>
-                        <Button variant="outline" type="button">Change Avatar</Button>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="name">Full Name</Label>
-                          <Input
-                            id="name"
-                            value={profileForm.name}
-                            onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="phone">Phone Number</Label>
-                          <Input
-                            id="phone"
-                            value={profileForm.phone}
-                            onChange={(e) => setProfileForm(prev => ({ ...prev, phone: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-4 p-5 border border-border rounded-xl bg-secondary/10">
-                        <h3 className="font-semibold text-foreground mb-2">Business Settings</h3>
-                        <div className="flex items-center gap-2 mb-4">
-                          <input
-                            type="checkbox"
-                            id="dashboardGstRegistered"
-                            checked={profileForm.isGstRegistered}
-                            onChange={(e) => {
-                              setProfileForm(prev => ({
-                                ...prev,
-                                isGstRegistered: e.target.checked,
-                                gstin: e.target.checked ? prev.gstin : ''
-                              }));
-                            }}
-                            className="w-4 h-4 rounded border-primary/20 text-primary focus:ring-primary/20"
-                          />
-                          <Label htmlFor="dashboardGstRegistered">
-                            I am GST Registered
-                          </Label>
-                        </div>
-
-                        {profileForm.isGstRegistered && (
-                          <div className="space-y-2">
-                            <Label htmlFor="gstin">GSTIN / GST Number</Label>
-                            <Input
-                              id="gstin"
-                              value={profileForm.gstin}
-                              onChange={(e) => setProfileForm(prev => ({ ...prev, gstin: e.target.value.toUpperCase() }))}
-                              placeholder="e.g. 07AAAAA0000A1Z5"
-                              className="uppercase"
-                              required={profileForm.isGstRegistered}
-                              pattern="^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$"
-                              title="Please enter a valid 15-character Indian GSTIN"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="email">Email Address</Label>
-                          <Input id="email" value={user.email} disabled className="bg-muted" />
-                          <p className="text-xs text-muted-foreground">Email cannot be changed</p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="address">Full Address</Label>
-                          <Textarea
-                            id="address"
-                            rows={3}
-                            value={profileForm.address}
-                            onChange={(e) => setProfileForm(prev => ({ ...prev, address: e.target.value }))}
-                            placeholder="Enter your complete billing address..."
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="bio">Bio</Label>
-                        <Textarea
-                          id="bio"
-                          rows={4}
-                          value={profileForm.bio}
-                          onChange={(e) => setProfileForm(prev => ({ ...prev, bio: e.target.value }))}
-                          placeholder="Tell buyers a bit about yourself..."
-                        />
-                      </div>
-
-                      {/* Social Links */}
-                      <div className="space-y-4 pt-4 border-t border-border">
-                        <h3 className="font-semibold text-lg flex items-center gap-2">
-                          Social Links
-                        </h3>
-                        <div className="grid grid-cols-1 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="facebook" className="flex items-center gap-2">
-                              <Facebook className="h-4 w-4 text-blue-600" />
-                              Facebook
-                            </Label>
-                            <Input
-                              id="facebook"
-                              placeholder="https://facebook.com/username"
-                              value={profileForm.facebook}
-                              onChange={(e) => setProfileForm(prev => ({ ...prev, facebook: e.target.value }))}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="instagram" className="flex items-center gap-2">
-                              <Instagram className="h-4 w-4 text-pink-600" />
-                              Instagram
-                            </Label>
-                            <Input
-                              id="instagram"
-                              placeholder="https://instagram.com/username"
-                              value={profileForm.instagram}
-                              onChange={(e) => setProfileForm(prev => ({ ...prev, instagram: e.target.value }))}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="twitter" className="flex items-center gap-2">
-                              <Twitter className="h-4 w-4 text-sky-500" />
-                              Twitter
-                            </Label>
-                            <Input
-                              id="twitter"
-                              placeholder="https://twitter.com/username"
-                              value={profileForm.twitter}
-                              onChange={(e) => setProfileForm(prev => ({ ...prev, twitter: e.target.value }))}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end pt-4">
-                        <Button type="submit" className="gap-2">
-                          <Save className="h-4 w-4" />
-                          Save Changes
+                      )}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px]">
+                        <Button variant="secondary" className="gap-2 shadow-sm rounded-full bg-background/90 hover:bg-background text-foreground" onClick={() => bannerInputRef.current?.click()} disabled={isUploadingBanner}>
+                          <ImageIcon className="h-4 w-4" />
+                          {isUploadingBanner ? 'Uploading...' : 'Upload Cover Image'}
                         </Button>
+                        <input type="file" ref={bannerInputRef} className="hidden" accept="image/png, image/jpeg, image/jpg" onChange={handleBannerUpload} />
                       </div>
-                    </form>
+                    </div>
+
+                    <div className="p-6">
+                      <form onSubmit={handleSaveProfile} className="space-y-6">
+                        <div className="flex items-center gap-6 mb-6 -mt-12 relative z-10 w-full">
+                          <div className="relative group">
+                            <div className="w-24 h-24 rounded-full bg-secondary flex items-center justify-center text-4xl font-display text-muted-foreground border-4 border-background shadow-md overflow-hidden bg-white">
+                              {profileForm.avatarUrl ? (
+                                <img src={profileForm.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                              ) : (
+                                user.name.charAt(0)
+                              )}
+                            </div>
+                            <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center backdrop-blur-[1px] cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
+                              <Camera className="h-6 w-6 text-white" />
+                            </div>
+                            <input type="file" ref={avatarInputRef} className="hidden" accept="image/png, image/jpeg, image/jpg" onChange={handleAvatarUpload} />
+                          </div>
+
+                          <div className="flex-1 mt-6">
+                            <h2 className="text-lg font-bold">{user.name}</h2>
+                            <p className="text-sm text-muted-foreground">Click the camera icon on avatar to upload (Max 2MB)</p>
+                          </div>
+                        </div>                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="name">Full Name</Label>
+                            <Input
+                              id="name"
+                              value={profileForm.name}
+                              onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="phone">Phone Number</Label>
+                            <Input
+                              id="phone"
+                              value={profileForm.phone}
+                              onChange={(e) => setProfileForm(prev => ({ ...prev, phone: e.target.value }))}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-4 p-5 border border-border rounded-xl bg-secondary/10">
+                          <h3 className="font-semibold text-foreground mb-2">Business Settings</h3>
+                          <div className="flex items-center gap-2 mb-4">
+                            <input
+                              type="checkbox"
+                              id="dashboardGstRegistered"
+                              checked={profileForm.isGstRegistered}
+                              onChange={(e) => {
+                                setProfileForm(prev => ({
+                                  ...prev,
+                                  isGstRegistered: e.target.checked,
+                                  gstin: e.target.checked ? prev.gstin : ''
+                                }));
+                              }}
+                              className="w-4 h-4 rounded border-primary/20 text-primary focus:ring-primary/20"
+                            />
+                            <Label htmlFor="dashboardGstRegistered">
+                              I am GST Registered
+                            </Label>
+                          </div>
+
+                          {profileForm.isGstRegistered && (
+                            <div className="space-y-2">
+                              <Label htmlFor="gstin">GSTIN / GST Number</Label>
+                              <Input
+                                id="gstin"
+                                value={profileForm.gstin}
+                                onChange={(e) => setProfileForm(prev => ({ ...prev, gstin: e.target.value.toUpperCase() }))}
+                                placeholder="e.g. 07AAAAA0000A1Z5"
+                                className="uppercase"
+                                required={profileForm.isGstRegistered}
+                                pattern="^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$"
+                                title="Please enter a valid 15-character Indian GSTIN"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="email">Email Address</Label>
+                            <Input id="email" value={user.email} disabled className="bg-muted" />
+                            <p className="text-xs text-muted-foreground">Email cannot be changed</p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="address">Full Address</Label>
+                            <Textarea
+                              id="address"
+                              rows={3}
+                              value={profileForm.address}
+                              onChange={(e) => setProfileForm(prev => ({ ...prev, address: e.target.value }))}
+                              placeholder="Enter your complete billing address..."
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="bio">Bio</Label>
+                          <Textarea
+                            id="bio"
+                            rows={4}
+                            value={profileForm.bio}
+                            onChange={(e) => setProfileForm(prev => ({ ...prev, bio: e.target.value }))}
+                            placeholder="Tell buyers a bit about yourself..."
+                          />
+                        </div>
+
+                        {/* Social Links */}
+                        <div className="space-y-4 pt-4 border-t border-border">
+                          <h3 className="font-semibold text-lg flex items-center gap-2">
+                            Social Links
+                          </h3>
+                          <div className="grid grid-cols-1 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="facebook" className="flex items-center gap-2">
+                                <Facebook className="h-4 w-4 text-blue-600" />
+                                Facebook
+                              </Label>
+                              <Input
+                                id="facebook"
+                                placeholder="https://facebook.com/username"
+                                value={profileForm.facebook}
+                                onChange={(e) => setProfileForm(prev => ({ ...prev, facebook: e.target.value }))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="instagram" className="flex items-center gap-2">
+                                <Instagram className="h-4 w-4 text-pink-600" />
+                                Instagram
+                              </Label>
+                              <Input
+                                id="instagram"
+                                placeholder="https://instagram.com/username"
+                                value={profileForm.instagram}
+                                onChange={(e) => setProfileForm(prev => ({ ...prev, instagram: e.target.value }))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="twitter" className="flex items-center gap-2">
+                                <Twitter className="h-4 w-4 text-sky-500" />
+                                Twitter
+                              </Label>
+                              <Input
+                                id="twitter"
+                                placeholder="https://twitter.com/username"
+                                value={profileForm.twitter}
+                                onChange={(e) => setProfileForm(prev => ({ ...prev, twitter: e.target.value }))}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end pt-4">
+                          <Button type="submit" className="gap-2">
+                            <Save className="h-4 w-4" />
+                            Save Changes
+                          </Button>
+                        </div>
+                      </form>
+                    </div>
                   </div>
                 </div>
               )}

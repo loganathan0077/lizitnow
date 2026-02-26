@@ -281,6 +281,77 @@ app.get('/api/user/ads', authenticate, async (req, res) => {
     }
 });
 
+// Update User Banner
+app.post('/api/user/banner', authenticate, async (req, res) => {
+    try {
+        const { bannerImage } = req.body;
+        if (!bannerImage) return res.status(400).json({ error: 'Banner image required' });
+
+        await prisma.user.update({
+            where: { id: req.user.userId },
+            data: { bannerImage }
+        });
+
+        res.json({ message: 'Banner updated successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to update banner' });
+    }
+});
+
+// Update User Avatar
+app.post('/api/user/avatar', authenticate, async (req, res) => {
+    try {
+        const { avatarUrl } = req.body;
+        if (!avatarUrl) return res.status(400).json({ error: 'Avatar image required' });
+
+        await prisma.user.update({
+            where: { id: req.user.userId },
+            data: { avatarUrl }
+        });
+
+        res.json({ message: 'Avatar updated successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to update avatar' });
+    }
+});
+
+// Get Public Seller Profile by ID
+app.get('/api/seller/:id', async (req, res) => {
+    try {
+        const seller = await prisma.user.findUnique({
+            where: { id: req.params.id },
+            select: {
+                id: true,
+                name: true,
+                createdAt: true,
+                adsPosted: true,
+                isGstVerified: true,
+                facebookUrl: true,
+                instagramUrl: true,
+                twitterUrl: true,
+                bannerImage: true,
+                avatarUrl: true
+            }
+        });
+
+        if (!seller) return res.status(404).json({ error: 'Seller not found' });
+
+        const activeAds = await prisma.ad.findMany({
+            where: { userId: seller.id, status: 'active' },
+            include: { category: true },
+            orderBy: { createdAt: 'desc' },
+            take: 10
+        });
+
+        res.json({ seller, ads: activeAds });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Get single ad by ID
 app.get('/api/ads/:id', async (req, res) => {
     try {
@@ -858,6 +929,67 @@ app.delete('/api/admin/subcategories/:id', authenticate, isAdmin, async (req, re
         res.status(500).json({ error: 'Failed to delete subcategory' });
     }
 });
+
+// ─── WISHLIST ROUTES ────────────────────────────────────────
+// GET /api/wishlist  — fetch logged-in user's wishlist
+app.get('/api/wishlist', authenticate, async (req, res) => {
+    try {
+        const items = await prisma.wishlist.findMany({
+            where: { userId: req.user.userId },
+            include: {
+                ad: {
+                    select: {
+                        id: true, title: true, price: true, images: true,
+                        location: true, status: true, category: { select: { name: true } },
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json(items);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch wishlist' });
+    }
+});
+
+// POST /api/wishlist/:adId  — add ad to wishlist (idempotent)
+app.post('/api/wishlist/:adId', authenticate, async (req, res) => {
+    try {
+        const item = await prisma.wishlist.upsert({
+            where: { userId_adId: { userId: req.user.userId, adId: req.params.adId } },
+            update: {},
+            create: { userId: req.user.userId, adId: req.params.adId },
+        });
+        res.json({ message: 'Added to wishlist', item });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to add to wishlist' });
+    }
+});
+
+// DELETE /api/wishlist/:adId  — remove ad from wishlist
+app.delete('/api/wishlist/:adId', authenticate, async (req, res) => {
+    try {
+        await prisma.wishlist.delete({
+            where: { userId_adId: { userId: req.user.userId, adId: req.params.adId } },
+        });
+        res.json({ message: 'Removed from wishlist' });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to remove from wishlist' });
+    }
+});
+
+// GET /api/wishlist/status/:adId — check if specific ad is in wishlist
+app.get('/api/wishlist/status/:adId', authenticate, async (req, res) => {
+    try {
+        const item = await prisma.wishlist.findUnique({
+            where: { userId_adId: { userId: req.user.userId, adId: req.params.adId } },
+        });
+        res.json({ isSaved: !!item });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to check wishlist status' });
+    }
+});
+// ────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

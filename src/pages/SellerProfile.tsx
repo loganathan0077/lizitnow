@@ -1,6 +1,6 @@
 import { calculateSellerTier } from '@/utils/reputation';
 
-import { useParams } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -22,12 +22,13 @@ import {
     Ban,
     Facebook,
     Instagram,
-    Twitter
+    Twitter,
+    Camera
 } from 'lucide-react';
 import { ReportDialog } from '@/components/shared/ReportDialog';
 import { mockAds } from './Dashboard'; // Reusing mock ads for now
 import { Seller } from '@/types/marketplace';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
 // Mock Seller Data (Extended)
@@ -62,15 +63,56 @@ const mockSellerData: Seller = { // Renamed to mockSellerData to distinguish fro
 
 const SellerProfile = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [isFollowing, setIsFollowing] = useState(false);
 
-    // Calculate dynamic tier
+    const [fetchedSeller, setFetchedSeller] = useState<any>(null);
+    const [fetchedAds, setFetchedAds] = useState<any[]>([]);
+    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const bannerInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        // Fetch Current User
+        const fetchMe = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+            try {
+                const res = await fetch('http://localhost:5001/api/auth/me', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (res.ok) setCurrentUser(data.user);
+            } catch (e) {
+                console.error(e);
+            }
+        };
+        fetchMe();
+
+        // Fetch Public Seller Profile
+        const fetchSeller = async () => {
+            try {
+                const res = await fetch(`http://localhost:5001/api/seller/${id}`);
+                const data = await res.json();
+                if (res.ok) {
+                    setFetchedSeller(data.seller);
+                    setFetchedAds(data.ads);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        };
+        fetchSeller();
+    }, [id]);
+
+    // Calculate dynamic tier (fallback to mocked stats for UI polish)
     const currentTier = calculateSellerTier(mockSellerData.stats, mockSellerData.rating);
 
-    // Merge calculated tier into mock data for display
-    const mockSeller = { ...mockSellerData, tier: currentTier };
+    // Merge calculated tier into data for display
+    const mockSeller = fetchedSeller ? { ...mockSellerData, ...fetchedSeller, tier: currentTier } : { ...mockSellerData, tier: currentTier };
+    const displayAds = fetchedAds.length > 0 ? fetchedAds : mockAds.slice(0, 4);
 
-    // ... rest of component ...
+    const isOwner = currentUser?.id === id;
 
 
     const handleFollow = () => {
@@ -94,6 +136,59 @@ const SellerProfile = () => {
         });
     };
 
+    const handleChat = () => {
+        if (!localStorage.getItem('token')) {
+            toast.error('Please login to chat with sellers.');
+            navigate('/login');
+            return;
+        }
+        if (isOwner) {
+            toast.error("You cannot chat with yourself.");
+            return;
+        }
+        navigate(`/messages/${id}`);
+    };
+
+    const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 2 * 1024 * 1024) {
+            toast.error('Image size must be less than 2MB');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = async () => {
+            const base64Image = reader.result;
+            setIsUploading(true);
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch('http://localhost:5001/api/user/banner', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ bannerImage: base64Image })
+                });
+
+                if (res.ok) {
+                    toast.success('Profile banner updated successfully');
+                    setFetchedSeller((prev: any) => ({ ...prev, bannerImage: base64Image }));
+                } else {
+                    toast.error('Failed to update banner');
+                }
+            } catch (err) {
+                console.error(err);
+                toast.error('An error occurred while uploading');
+            } finally {
+                setIsUploading(false);
+            }
+        };
+    };
+
     return (
         <div className="min-h-screen flex flex-col bg-background">
             <Header />
@@ -101,8 +196,29 @@ const SellerProfile = () => {
             <main className="flex-1 py-12">
                 <div className="container max-w-5xl">
 
+                    {/* Banner Image Area */}
+                    <div className="relative w-full h-48 md:h-64 rounded-t-3xl overflow-hidden group border border-border bg-muted">
+                        {mockSeller.bannerImage ? (
+                            <img src={mockSeller.bannerImage} alt="Profile Cover" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full bg-gradient-to-r from-slate-200 to-slate-100 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center relative overflow-hidden">
+                                {/* Abstract pattern for default cover */}
+                                <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-300 via-transparent to-transparent dark:from-slate-700"></div>
+                            </div>
+                        )}
+                        {isOwner && (
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px]">
+                                <Button variant="secondary" className="gap-2 shadow-sm rounded-full bg-background/90 hover:bg-background text-foreground" onClick={() => bannerInputRef.current?.click()} disabled={isUploading}>
+                                    <Camera className="h-4 w-4" />
+                                    {isUploading ? 'Uploading...' : 'Change Cover Photo'}
+                                </Button>
+                                <input type="file" ref={bannerInputRef} className="hidden" accept="image/png, image/jpeg" onChange={handleBannerUpload} />
+                            </div>
+                        )}
+                    </div>
+
                     {/* Header Section */}
-                    <div className="bg-gradient-to-br from-secondary/50 to-background border border-border rounded-3xl p-8 mb-8">
+                    <div className="bg-card border-x border-b border-border rounded-b-3xl p-8 mb-8 -mt-6 relative z-10 shadow-sm">
                         <div className="flex flex-col md:flex-row gap-8 items-start">
 
                             {/* Avatar & Badges */}
@@ -132,7 +248,7 @@ const SellerProfile = () => {
                                         <Button variant={isFollowing ? "outline" : "accent"} onClick={handleFollow}>
                                             {isFollowing ? 'Following' : 'Follow'}
                                         </Button>
-                                        <Button variant="outline" className="gap-2">
+                                        <Button variant="outline" className="gap-2" onClick={handleChat}>
                                             <MessageCircle className="h-4 w-4" /> Chat
                                         </Button>
                                         <ReportDialog sellerName={mockSeller.name} />
@@ -253,19 +369,26 @@ const SellerProfile = () => {
                             <div>
                                 <h3 className="font-display font-semibold text-xl mb-4">Active Listings</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {mockAds.slice(0, 4).map(ad => (
+                                    {displayAds.map((ad: any) => (
                                         <div key={ad.id} className="card-premium overflow-hidden hover:shadow-lg transition-shadow">
                                             <div className="aspect-video bg-secondary relative">
+                                                {ad.images && typeof ad.images === 'string' && JSON.parse(ad.images).length > 0 ? (
+                                                    <img src={JSON.parse(ad.images)[0]} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-muted">No Image</div>
+                                                )}
                                                 <div className="absolute top-2 right-2">
                                                     <div className="bg-black/50 backdrop-blur-md text-white text-xs px-2 py-1 rounded">
-                                                        {ad.category}
+                                                        {ad.category?.name || ad.category}
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="p-4">
                                                 <h4 className="font-semibold truncate">{ad.title}</h4>
                                                 <div className="text-lg font-bold text-primary mt-1">₹{ad.price.toLocaleString()}</div>
-                                                <Button variant="outline" size="sm" className="w-full mt-3">View Details</Button>
+                                                <Button variant="outline" size="sm" className="w-full mt-3" asChild>
+                                                    <Link to={`/listing/${ad.id}`}>View Details</Link>
+                                                </Button>
                                             </div>
                                         </div>
                                     ))}
