@@ -1246,7 +1246,7 @@ const Dashboard = () => {
               </div>
 
               <div className="grid grid-cols-3 gap-2 py-2">
-                {[1, 5, 10].map(amt => (
+                {[49, 99, 199].map(amt => (
                   <Button
                     key={amt}
                     type="button"

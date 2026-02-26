@@ -21,8 +21,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key-for-developme
 
 // Razorpay instance
 const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock_key',
-    key_secret: process.env.RAZORPAY_KEY_SECRET || 'rzp_test_mock_secret',
+    key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_SKnTW4vdIbLtKk',
+    key_secret: process.env.RAZORPAY_KEY_SECRET || 'jZmMEEfXwRbXTtRg5UGWvKvZ',
 });
 
 // Middleware: Authenticate User
