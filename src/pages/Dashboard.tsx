@@ -282,6 +282,8 @@ const Dashboard = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create order');
 
+      const savedAmount = Number(rechargeAmount);
+
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_SKnTW4vdIbLtKk',
         amount: data.amount,
@@ -290,6 +292,7 @@ const Dashboard = () => {
         description: 'Wallet Recharge',
         order_id: data.orderId,
         handler: async function (response: any) {
+          console.log('Razorpay payment success, verifying...', response);
           try {
             const verifyRes = await fetch(`${API_BASE}/api/payment/verify`, {
               method: 'POST',
@@ -301,15 +304,16 @@ const Dashboard = () => {
               })
             });
             const verifyData = await verifyRes.json();
+            console.log('Verify response:', verifyData);
             if (verifyRes.ok) {
-              toast.success(`Wallet recharged with ₹${rechargeAmount}!`);
-              setIsRechargeModalOpen(false);
-              setUser((prev: any) => ({ ...prev, walletBalance: verifyData.walletBalance }));
+              alert(`✅ Wallet recharged with ₹${savedAmount}! New balance: ₹${verifyData.walletBalance}`);
+              window.location.reload();
             } else {
-              toast.error(verifyData.error || 'Payment verification failed');
+              alert(`❌ Payment verification failed: ${verifyData.error || 'Unknown error'}`);
             }
-          } catch {
-            toast.error('Payment verification failed. Contact support.');
+          } catch (err) {
+            console.error('Verify fetch error:', err);
+            alert('❌ Payment verification failed. Please contact support.');
           }
         },
         prefill: {
