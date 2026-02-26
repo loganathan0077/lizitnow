@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import Header from '@/components/layout/Header';
@@ -99,7 +100,7 @@ const Listings = () => {
   const [categoriesList, setCategoriesList] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch('http://localhost:5001/api/categories')
+    fetch(`${API_BASE}/api/categories`)
       .then(res => res.json())
       .then(data => setCategoriesList(data.categories || []))
       .catch(err => console.error(err));

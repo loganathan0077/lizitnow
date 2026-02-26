@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import { calculateSellerTier } from '@/utils/reputation';
 
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -56,9 +57,9 @@ const mockSellerData: Seller = { // Renamed to mockSellerData to distinguish fro
     ],
     isVerifiedMobile: true,
     isVerifiedEmail: true,
-    facebookUrl: 'https://facebook.com/rahulsharma',
-    instagramUrl: 'https://instagram.com/rahul.sharma',
-    twitterUrl: 'https://twitter.com/rahul_trades'
+    facebookUrl: 'https://facebook.com/rahulsharma`,
+    instagramUrl: 'https://instagram.com/rahul.sharma`,
+    twitterUrl: 'https://twitter.com/rahul_trades`
 };
 
 const SellerProfile = () => {
@@ -78,7 +79,7 @@ const SellerProfile = () => {
             const token = localStorage.getItem('token');
             if (!token) return;
             try {
-                const res = await fetch('http://localhost:5001/api/auth/me', {
+                const res = await fetch(`${API_BASE}/api/auth/me`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 const data = await res.json();
@@ -92,7 +93,7 @@ const SellerProfile = () => {
         // Fetch Public Seller Profile
         const fetchSeller = async () => {
             try {
-                const res = await fetch(`http://localhost:5001/api/seller/${id}`);
+                const res = await fetch(`${API_BASE}/api/seller/${id}`);
                 const data = await res.json();
                 if (res.ok) {
                     setFetchedSeller(data.seller);
@@ -165,7 +166,7 @@ const SellerProfile = () => {
             setIsUploading(true);
             try {
                 const token = localStorage.getItem('token');
-                const res = await fetch('http://localhost:5001/api/user/banner', {
+                const res = await fetch(`${API_BASE}/api/user/banner`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

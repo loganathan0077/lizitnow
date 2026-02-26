@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Header from '@/components/layout/Header';
@@ -21,7 +22,7 @@ const CategoryView = () => {
             setIsLoading(true);
             try {
                 // Fetch ads from our backend
-                let url = `http://localhost:5001/api/ads?`;
+                let url = `${API_BASE}/api/ads?`;
                 if (subcategorySlug) {
                     url += `subcategorySlug=${subcategorySlug}`;
                 } else if (categorySlug) {
@@ -58,7 +59,7 @@ const CategoryView = () => {
                 }
 
                 // Let's also fetch the category name if we only have the slug
-                const catRes = await fetch('http://localhost:5001/api/categories');
+                const catRes = await fetch(`${API_BASE}/api/categories`);
                 if (catRes.ok) {
                     const catData = await catRes.json();
                     const cat = catData.categories.find((c: any) => c.slug === categorySlug);

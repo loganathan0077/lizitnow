@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
@@ -7,7 +8,7 @@ const CategoryNav = () => {
     const [categories, setCategories] = useState<any[]>([]);
 
     useEffect(() => {
-        fetch('http://localhost:5001/api/categories')
+        fetch(`${API_BASE}/api/categories`)
             .then(res => res.json())
             .then(data => setCategories(data.categories || []))
             .catch(err => console.error(err));

@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 
 import { useEffect, useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -138,7 +139,7 @@ const Dashboard = () => {
       const fetchAds = async () => {
         try {
           const token = localStorage.getItem('token');
-          const res = await fetch('http://localhost:5001/api/user/ads', {
+          const res = await fetch(`${API_BASE}/api/user/ads`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           const data = await res.json();
@@ -156,7 +157,7 @@ const Dashboard = () => {
       const fetchBilling = async () => {
         try {
           const token = localStorage.getItem('token');
-          const res = await fetch('http://localhost:5001/api/user/billing-history', {
+          const res = await fetch(`${API_BASE}/api/user/billing-history`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           const data = await res.json();
@@ -176,7 +177,7 @@ const Dashboard = () => {
         setIsWishlistLoading(true);
         try {
           const token = localStorage.getItem('token');
-          const res = await fetch('http://localhost:5001/api/wishlist', {
+          const res = await fetch(`${API_BASE}/api/wishlist`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           const data = await res.json();
@@ -196,7 +197,7 @@ const Dashboard = () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) return navigate('/login');
-        const res = await fetch('http://localhost:5001/api/auth/me', {
+        const res = await fetch(`${API_BASE}/api/auth/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
@@ -270,7 +271,7 @@ const Dashboard = () => {
     }
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5001/api/payment/create-order', {
+      const res = await fetch(`${API_BASE}/api/payment/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -289,7 +290,7 @@ const Dashboard = () => {
         description: 'Wallet Recharge',
         order_id: data.orderId,
         handler: async function (response: any) {
-          const verifyRes = await fetch('http://localhost:5001/api/payment/verify', {
+          const verifyRes = await fetch(`${API_BASE}/api/payment/verify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({
@@ -318,7 +319,7 @@ const Dashboard = () => {
   const handleRemoveFromWishlist = async (adId: string) => {
     const token = localStorage.getItem('token');
     try {
-      await fetch(`http://localhost:5001/api/wishlist/${adId}`, {
+      await fetch(`${API_BASE}/api/wishlist/${adId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -384,7 +385,7 @@ const Dashboard = () => {
       const base64Image = await processImage(file, true);
 
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5001/api/user/avatar', {
+      const res = await fetch(`${API_BASE}/api/user/avatar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ avatarUrl: base64Image })
@@ -419,7 +420,7 @@ const Dashboard = () => {
       const base64Image = await processImage(file, false);
 
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5001/api/user/banner', {
+      const res = await fetch(`${API_BASE}/api/user/banner`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ bannerImage: base64Image })
@@ -444,7 +445,7 @@ const Dashboard = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5001/api/auth/profile', {
+      const res = await fetch(`${API_BASE}/api/auth/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -836,12 +837,12 @@ const Dashboard = () => {
                                 {invoice.status}
                               </span>
                               <Button size="sm" variant="outline" className="gap-2" asChild>
-                                <a href={`http://localhost:5001/api/invoices/${invoice.id}/download?token=${localStorage.getItem('token')}&action=view`} target="_blank" rel="noreferrer">
+                                <a href={`${API_BASE}/api/invoices/${invoice.id}/download?token=${localStorage.getItem(`token')}&action=view`} target="_blank" rel="noreferrer">
                                   <Eye className="h-4 w-4" /> View
                                 </a>
                               </Button>
                               <Button size="sm" variant="outline" className="gap-2" asChild>
-                                <a href={`http://localhost:5001/api/invoices/${invoice.id}/download?token=${localStorage.getItem('token')}&action=download`} target="_blank" rel="noreferrer">
+                                <a href={`${API_BASE}/api/invoices/${invoice.id}/download?token=${localStorage.getItem(`token')}&action=download`} target="_blank" rel="noreferrer">
                                   <Download className="h-4 w-4" /> Download
                                 </a>
                               </Button>

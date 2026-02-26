@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
@@ -8,7 +9,7 @@ const CategoriesSection = () => {
   const [categories, setCategories] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch('http://localhost:5001/api/categories')
+    fetch(`${API_BASE}/api/categories`)
       .then(res => res.json())
       .then(data => setCategories(data.categories || []))
       .catch(err => console.error(err));

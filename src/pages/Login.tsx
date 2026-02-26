@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -40,7 +41,7 @@ const Login = () => {
 
     try {
       if (mode === 'login') {
-        const res = await fetch('http://localhost:5001/api/auth/login', {
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
@@ -54,7 +55,7 @@ const Login = () => {
         toast.success('Login Successful', { description: 'Welcome back to Liztitnow.com!' });
         navigate('/dashboard');
       } else {
-        const res = await fetch('http://localhost:5001/api/auth/register', {
+        const res = await fetch(`${API_BASE}/api/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, password, referredByCode: referralCode || undefined, gstin: gstin || undefined })

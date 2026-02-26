@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/layout/Header';
@@ -34,7 +35,7 @@ export default function AdminDashboard() {
                 startDate: invoiceFilter.startDate,
                 endDate: invoiceFilter.endDate
             });
-            const res = await fetch(`http://localhost:5001/api/admin/invoices?${query}`, {
+            const res = await fetch(`${API_BASE}/api/admin/invoices?${query}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const data = await res.json();
@@ -82,9 +83,9 @@ export default function AdminDashboard() {
             if (!token) return navigate('/login');
 
             const [statsRes, usersRes, catsRes] = await Promise.all([
-                fetch('http://localhost:5001/api/admin/founder-stats', { headers: { Authorization: `Bearer ${token}` } }),
-                fetch('http://localhost:5001/api/admin/users', { headers: { Authorization: `Bearer ${token}` } }),
-                fetch('http://localhost:5001/api/categories')
+                fetch(`${API_BASE}/api/admin/founder-stats`, { headers: { Authorization: `Bearer ${token}` } }),
+                fetch(`${API_BASE}/api/admin/users`, { headers: { Authorization: `Bearer ${token}` } }),
+                fetch(`${API_BASE}/api/categories`)
             ]);
 
             if (!statsRes.ok || !usersRes.ok) {
@@ -115,7 +116,7 @@ export default function AdminDashboard() {
     const handleToggleBlock = async (userId: string) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:5001/api/admin/users/${userId}/block`, {
+            const res = await fetch(`${API_BASE}/api/admin/users/${userId}/block`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -134,8 +135,8 @@ export default function AdminDashboard() {
         try {
             const token = localStorage.getItem('token');
             const url = editingCategory
-                ? `http://localhost:5001/api/admin/categories/${editingCategory.id}`
-                : `http://localhost:5001/api/admin/categories`;
+                ? `${API_BASE}/api/admin/categories/${editingCategory.id}`
+                : `${API_BASE}/api/admin/categories`;
 
             const method = editingCategory ? 'PUT' : 'POST';
 
@@ -159,7 +160,7 @@ export default function AdminDashboard() {
         if (!confirm('Are you sure you want to delete this category? All related subcategories and ads will be lost.')) return;
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:5001/api/admin/categories/${id}`, {
+            const res = await fetch(`${API_BASE}/api/admin/categories/${id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -184,8 +185,8 @@ export default function AdminDashboard() {
 
             const token = localStorage.getItem('token');
             const url = editingSubcategory
-                ? `http://localhost:5001/api/admin/subcategories/${editingSubcategory.id}`
-                : `http://localhost:5001/api/admin/subcategories`;
+                ? `${API_BASE}/api/admin/subcategories/${editingSubcategory.id}`
+                : `${API_BASE}/api/admin/subcategories`;
 
             const method = editingSubcategory ? 'PUT' : 'POST';
 
@@ -209,7 +210,7 @@ export default function AdminDashboard() {
         if (!confirm('Are you sure you want to delete this subcategory?')) return;
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:5001/api/admin/subcategories/${id}`, {
+            const res = await fetch(`${API_BASE}/api/admin/subcategories/${id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` }
             });

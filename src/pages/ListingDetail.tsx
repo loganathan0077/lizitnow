@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import { useParams, Link } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -45,7 +46,7 @@ const ListingDetail = () => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token || !id) return;
-    fetch(`http://localhost:5001/api/wishlist/status/${id}`, {
+    fetch(`${API_BASE}/api/wishlist/status/${id}`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(r => r.json())
@@ -61,7 +62,7 @@ const ListingDetail = () => {
     }
     const method = isFavorited ? 'DELETE' : 'POST';
     try {
-      const res = await fetch(`http://localhost:5001/api/wishlist/${id}`, {
+      const res = await fetch(`${API_BASE}/api/wishlist/${id}`, {
         method,
         headers: { Authorization: `Bearer ${token}` }
       });
