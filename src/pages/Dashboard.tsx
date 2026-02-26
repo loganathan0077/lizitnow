@@ -264,16 +264,73 @@ const Dashboard = () => {
     return diffDays > 0 ? diffDays : 0;
   };
 
-  const handleRechargeSubmit = () => {
+  const handleRechargeSubmit = async () => {
     if (!rechargeAmount || rechargeAmount < 1) {
       toast.error('Minimum recharge amount is ₹1');
       return;
     }
-    // Open Razorpay payment link in a new tab with amount pre-filled
-    const paymentUrl = `https://razorpay.me/@shermonindustries?amount=${Number(rechargeAmount) * 100}`;
-    window.open(paymentUrl, '_blank');
-    toast.info('Payment page opened in a new tab. Complete the payment there.');
-    setIsRechargeModalOpen(false);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/api/payment/create-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ amount: Number(rechargeAmount) })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create order');
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_SKnTW4vdIbLtKk',
+        amount: data.amount,
+        currency: data.currency,
+        name: 'Liztitnow.com',
+        description: 'Wallet Recharge',
+        order_id: data.orderId,
+        handler: async function (response: any) {
+          try {
+            const verifyRes = await fetch(`${API_BASE}/api/payment/verify`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              })
+            });
+            const verifyData = await verifyRes.json();
+            if (verifyRes.ok) {
+              toast.success(`Wallet recharged with ₹${rechargeAmount}!`);
+              setIsRechargeModalOpen(false);
+              setUser((prev: any) => ({ ...prev, walletBalance: verifyData.walletBalance }));
+            } else {
+              toast.error(verifyData.error || 'Payment verification failed');
+            }
+          } catch {
+            toast.error('Payment verification failed. Contact support.');
+          }
+        },
+        prefill: {
+          name: user?.name || '',
+          email: user?.email || '',
+          contact: user?.phone || ''
+        },
+        theme: {
+          color: '#4A7C59'
+        },
+        modal: {
+          ondismiss: function () {
+            toast.info('Payment cancelled');
+          }
+        }
+      };
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to initiate payment');
+    }
   };
 
   const handleRemoveFromWishlist = async (adId: string) => {

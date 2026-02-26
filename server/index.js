@@ -522,9 +522,9 @@ app.post('/api/ads/post', authenticate, async (req, res) => {
 // Create Razorpay Order
 app.post('/api/payment/create-order', authenticate, async (req, res) => {
     try {
-        const reqAmount = req.body.amount || 49;
-        if (reqAmount < 49) {
-            return res.status(400).json({ error: 'Minimum recharge amount is ₹49.' });
+        const reqAmount = req.body.amount || 1;
+        if (reqAmount < 1) {
+            return res.status(400).json({ error: 'Minimum recharge amount is ₹1.' });
         }
         const amount = reqAmount * 100; // in paise
 
@@ -535,12 +535,7 @@ app.post('/api/payment/create-order', authenticate, async (req, res) => {
         };
 
         let order;
-        // Mock execution if the API keys are the default mock keys
-        if (process.env.RAZORPAY_KEY_ID === 'rzp_test_mock_key') {
-            order = { id: `mock_order_${crypto.randomBytes(6).toString('hex')}`, amount, currency: 'INR' };
-        } else {
-            order = await razorpay.orders.create(options);
-        }
+        order = await razorpay.orders.create(options);
 
         // Record the pending payment
         await prisma.payment.create({
@@ -570,16 +565,11 @@ app.post('/api/payment/verify', authenticate, async (req, res) => {
 
         let isSignatureValid = false;
 
-        if (process.env.RAZORPAY_KEY_ID === 'rzp_test_mock_key') {
-            // Allow any mock verification to succeed
-            isSignatureValid = true;
-        } else {
-            const generated_signature = crypto
-                .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-                .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-                .digest('hex');
-            isSignatureValid = generated_signature === razorpay_signature;
-        }
+        const generated_signature = crypto
+            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+            .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+            .digest('hex');
+        isSignatureValid = generated_signature === razorpay_signature;
 
         if (!isSignatureValid) {
             await prisma.payment.update({
