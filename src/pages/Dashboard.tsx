@@ -514,28 +514,40 @@ const Dashboard = () => {
               {/* User Card */}
               <div className="card-premium p-6 mb-6">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-                    <User className="h-7 w-7 text-primary" />
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center overflow-hidden">
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="h-7 w-7 text-primary" />
+                    )}
                   </div>
-                  <div>
-                    <div className="font-display font-semibold text-foreground">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-display font-semibold text-foreground truncate">
                       {user.name}
                     </div>
-                    {user.badges.length > 0 ? (
-                      <TrustBadges badges={user.badges as any} size="sm" />
-                    ) : (
-                      <div className="flex flex-col gap-2 mt-1">
-                        <span className="text-xs text-muted-foreground">Unverified User</span>
-                        <Button variant="outline" size="sm" className="h-7 text-xs border-dashed border-destructive text-destructive hover:bg-destructive/5" asChild>
-                          <Link to="/verification">
-                            <ShieldAlert className="h-3 w-3 mr-1" />
-                            Get Verified
-                          </Link>
-                        </Button>
+                    <div className="text-xs text-muted-foreground truncate mt-0.5">
+                      {user.email}
+                    </div>
+                    {user.createdAt && (
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        Member since {new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
                       </div>
                     )}
                   </div>
                 </div>
+                {user.badges && user.badges.length > 0 ? (
+                  <TrustBadges badges={user.badges as any} size="sm" />
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs text-muted-foreground">Unverified User</span>
+                    <Button variant="outline" size="sm" className="h-7 text-xs border-dashed border-destructive text-destructive hover:bg-destructive/5" asChild>
+                      <Link to="/verification">
+                        <ShieldAlert className="h-3 w-3 mr-1" />
+                        Get Verified
+                      </Link>
+                    </Button>
+                  </div>
+                )}
 
                 {/* Wallet Section */}
                 <div className="p-4 rounded-xl bg-amber/10 mb-4 border border-amber/20">
@@ -1179,155 +1191,159 @@ const Dashboard = () => {
 
             </div>
           </div>
-        </div>
-      </main>
+        </div >
+      </main >
 
       {/* Recharge Wallet Modal */}
-      {isRechargeModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="bg-card w-full max-w-md rounded-2xl shadow-xl border border-border p-6 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-display font-bold text-foreground">Recharge Wallet</h2>
-              <Button variant="ghost" size="icon" onClick={() => setIsRechargeModalOpen(false)}>
-                <XCircle className="h-6 w-6" />
-              </Button>
-            </div>
-
-            <p className="text-muted-foreground mb-6">
-              Add funds to your wallet. You'll be redirected to Razorpay to complete the payment.
-            </p>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="amount">Recharge Amount (₹)</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
-                  <Input
-                    id="amount"
-                    type="number"
-                    min="1"
-                    className="pl-8 text-lg font-bold"
-                    value={rechargeAmount}
-                    onChange={(e) => setRechargeAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                  />
-                </div>
-                {rechargeAmount !== '' && rechargeAmount < 1 && (
-                  <p className="text-xs text-destructive mt-1">Minimum recharge amount is ₹1.</p>
-                )}
+      {
+        isRechargeModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+            <div className="bg-card w-full max-w-md rounded-2xl shadow-xl border border-border p-6 animate-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-display font-bold text-foreground">Recharge Wallet</h2>
+                <Button variant="ghost" size="icon" onClick={() => setIsRechargeModalOpen(false)}>
+                  <XCircle className="h-6 w-6" />
+                </Button>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 py-2">
-                {[49, 99, 199].map(amt => (
-                  <Button
-                    key={amt}
-                    type="button"
-                    variant={rechargeAmount === amt ? 'accent' : 'outline'}
-                    onClick={() => setRechargeAmount(amt)}
-                  >
-                    ₹{amt}
-                  </Button>
-                ))}
-              </div>
-
-              <Button
-                variant="accent"
-                className="w-full mt-2 text-lg h-12"
-                onClick={handleRechargeSubmit}
-                disabled={rechargeAmount === '' || rechargeAmount < 1}
-              >
-                Proceed to Pay {rechargeAmount ? `₹${rechargeAmount}` : ''}
-              </Button>
-
-              <p className="text-xs text-muted-foreground text-center mt-2">
-                Powered by Razorpay • Secure Payment
+              <p className="text-muted-foreground mb-6">
+                Add funds to your wallet. You'll be redirected to Razorpay to complete the payment.
               </p>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Recharge Amount (₹)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+                    <Input
+                      id="amount"
+                      type="number"
+                      min="1"
+                      className="pl-8 text-lg font-bold"
+                      value={rechargeAmount}
+                      onChange={(e) => setRechargeAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                    />
+                  </div>
+                  {rechargeAmount !== '' && rechargeAmount < 1 && (
+                    <p className="text-xs text-destructive mt-1">Minimum recharge amount is ₹1.</p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 py-2">
+                  {[49, 99, 199].map(amt => (
+                    <Button
+                      key={amt}
+                      type="button"
+                      variant={rechargeAmount === amt ? 'accent' : 'outline'}
+                      onClick={() => setRechargeAmount(amt)}
+                    >
+                      ₹{amt}
+                    </Button>
+                  ))}
+                </div>
+
+                <Button
+                  variant="accent"
+                  className="w-full mt-2 text-lg h-12"
+                  onClick={handleRechargeSubmit}
+                  disabled={rechargeAmount === '' || rechargeAmount < 1}
+                >
+                  Proceed to Pay {rechargeAmount ? `₹${rechargeAmount}` : ''}
+                </Button>
+
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  Powered by Razorpay • Secure Payment
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Premium Payment Result Modal */}
-      {paymentResult && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="bg-card w-full max-w-sm rounded-2xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-300">
-            {paymentResult.type === 'success' ? (
-              <>
-                {/* Success Header */}
-                <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-8 text-center relative overflow-hidden">
-                  {/* Celebration particles */}
-                  <div className="absolute inset-0 overflow-hidden">
-                    {[...Array(12)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="absolute w-2 h-2 rounded-full animate-ping"
-                        style={{
-                          backgroundColor: ['#fbbf24', '#f472b6', '#60a5fa', '#34d399', '#a78bfa', '#fb923c'][i % 6],
-                          top: `${Math.random() * 100}%`,
-                          left: `${Math.random() * 100}%`,
-                          animationDelay: `${i * 0.15}s`,
-                          animationDuration: '1.5s'
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <div className="relative">
-                    <div className="w-20 h-20 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm ring-4 ring-white/30">
-                      <CheckCircle className="h-10 w-10 text-white" />
+      {
+        paymentResult && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+            <div className="bg-card w-full max-w-sm rounded-2xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-300">
+              {paymentResult.type === 'success' ? (
+                <>
+                  {/* Success Header */}
+                  <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-8 text-center relative overflow-hidden">
+                    {/* Celebration particles */}
+                    <div className="absolute inset-0 overflow-hidden">
+                      {[...Array(12)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="absolute w-2 h-2 rounded-full animate-ping"
+                          style={{
+                            backgroundColor: ['#fbbf24', '#f472b6', '#60a5fa', '#34d399', '#a78bfa', '#fb923c'][i % 6],
+                            top: `${Math.random() * 100}%`,
+                            left: `${Math.random() * 100}%`,
+                            animationDelay: `${i * 0.15}s`,
+                            animationDuration: '1.5s'
+                          }}
+                        />
+                      ))}
                     </div>
-                    <h2 className="text-2xl font-display font-bold text-white">Payment Successful!</h2>
+                    <div className="relative">
+                      <div className="w-20 h-20 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm ring-4 ring-white/30">
+                        <CheckCircle className="h-10 w-10 text-white" />
+                      </div>
+                      <h2 className="text-2xl font-display font-bold text-white">Payment Successful!</h2>
+                    </div>
                   </div>
-                </div>
-                {/* Success Body */}
-                <div className="p-6 text-center space-y-4">
-                  <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 space-y-2">
-                    <p className="text-sm text-muted-foreground">Amount Recharged</p>
-                    <p className="text-3xl font-display font-bold text-green-600 dark:text-green-400">₹{paymentResult.amount}</p>
+                  {/* Success Body */}
+                  <div className="p-6 text-center space-y-4">
+                    <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 space-y-2">
+                      <p className="text-sm text-muted-foreground">Amount Recharged</p>
+                      <p className="text-3xl font-display font-bold text-green-600 dark:text-green-400">₹{paymentResult.amount}</p>
+                    </div>
+                    <div className="flex items-center justify-between bg-secondary/50 rounded-xl p-4">
+                      <span className="text-sm font-medium text-muted-foreground">New Wallet Balance</span>
+                      <span className="text-xl font-bold text-foreground">₹{paymentResult.balance}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Your wallet has been credited successfully. You can now post ads!</p>
+                    <Button
+                      variant="accent"
+                      className="w-full h-12 text-base font-semibold rounded-xl"
+                      onClick={() => {
+                        setPaymentResult(null);
+                        window.location.reload();
+                      }}
+                    >
+                      Continue →
+                    </Button>
                   </div>
-                  <div className="flex items-center justify-between bg-secondary/50 rounded-xl p-4">
-                    <span className="text-sm font-medium text-muted-foreground">New Wallet Balance</span>
-                    <span className="text-xl font-bold text-foreground">₹{paymentResult.balance}</span>
+                </>
+              ) : (
+                <>
+                  {/* Error Header */}
+                  <div className="bg-gradient-to-br from-red-500 to-rose-600 p-8 text-center">
+                    <div className="w-20 h-20 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm ring-4 ring-white/30">
+                      <XCircle className="h-10 w-10 text-white" />
+                    </div>
+                    <h2 className="text-2xl font-display font-bold text-white">Payment Failed</h2>
                   </div>
-                  <p className="text-xs text-muted-foreground">Your wallet has been credited successfully. You can now post ads!</p>
-                  <Button
-                    variant="accent"
-                    className="w-full h-12 text-base font-semibold rounded-xl"
-                    onClick={() => {
-                      setPaymentResult(null);
-                      window.location.reload();
-                    }}
-                  >
-                    Continue →
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Error Header */}
-                <div className="bg-gradient-to-br from-red-500 to-rose-600 p-8 text-center">
-                  <div className="w-20 h-20 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm ring-4 ring-white/30">
-                    <XCircle className="h-10 w-10 text-white" />
+                  {/* Error Body */}
+                  <div className="p-6 text-center space-y-4">
+                    <p className="text-sm text-muted-foreground">{paymentResult.message}</p>
+                    <Button
+                      variant="outline"
+                      className="w-full h-12 text-base font-semibold rounded-xl"
+                      onClick={() => setPaymentResult(null)}
+                    >
+                      Try Again
+                    </Button>
                   </div>
-                  <h2 className="text-2xl font-display font-bold text-white">Payment Failed</h2>
-                </div>
-                {/* Error Body */}
-                <div className="p-6 text-center space-y-4">
-                  <p className="text-sm text-muted-foreground">{paymentResult.message}</p>
-                  <Button
-                    variant="outline"
-                    className="w-full h-12 text-base font-semibold rounded-xl"
-                    onClick={() => setPaymentResult(null)}
-                  >
-                    Try Again
-                  </Button>
-                </div>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       <Footer />
-    </div>
+    </div >
   );
 };
 
