@@ -696,11 +696,8 @@ const Dashboard = () => {
 
                   {/* Ads List */}
                   <div className="card-premium overflow-hidden">
-                    <div className="p-4 border-b border-border flex justify-between items-center">
+                    <div className="p-4 border-b border-border">
                       <h3 className="font-display font-semibold">Your Listings</h3>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to="/post">Post New Ad</Link>
-                      </Button>
                     </div>
                     <div className="divide-y divide-border">
                       {ads.length === 0 ? (
