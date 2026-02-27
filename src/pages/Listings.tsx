@@ -28,7 +28,8 @@ import {
   Factory,
   Locate
 } from 'lucide-react';
-import { formatPrice, locations } from '@/data/mockData';
+import { formatPrice } from '@/lib/formatPrice';
+import { locations } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { useLocationContext } from '@/context/LocationContext';
 import { LocationFilter } from '@/components/shared/LocationFilter';

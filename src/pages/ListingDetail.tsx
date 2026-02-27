@@ -22,15 +22,16 @@ import {
   TrendingDown,
   Eye,
   ShieldCheck,
-  Youtube
+  Youtube,
+  Loader2
 } from 'lucide-react';
-import { listings, formatPrice } from '@/data/mockData';
+import { formatPrice } from '@/lib/formatPrice';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { toast } from "sonner";
 import ChatSheet from '@/components/messaging/ChatSheet';
 
-const conditionLabels = {
+const conditionLabels: Record<string, string> = {
   new: 'Brand New',
   'like-new': 'Like New',
   used: 'Used',
@@ -42,7 +43,90 @@ const ListingDetail = () => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
 
-  // Check wishlist status on load
+  // Real backend data
+  const [listing, setListing] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [seller, setSeller] = useState<any>(null);
+
+  // Fetch listing from backend
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    fetch(`${API_BASE}/api/ads/${id}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Not found');
+        return res.json();
+      })
+      .then(data => {
+        const ad = data.ad || data;
+        // Parse JSON fields
+        let imgs: string[] = [];
+        try { imgs = typeof ad.images === 'string' ? JSON.parse(ad.images) : (ad.images || []); } catch { imgs = []; }
+        let dynFields: Record<string, any> = {};
+        try { dynFields = ad.dynamicData ? (typeof ad.dynamicData === 'string' ? JSON.parse(ad.dynamicData) : ad.dynamicData) : {}; } catch { }
+        let included: string[] = [];
+        try { included = ad.includedItems ? (typeof ad.includedItems === 'string' ? JSON.parse(ad.includedItems) : ad.includedItems) : []; } catch { }
+
+        setListing({
+          ...ad,
+          images: imgs.length > 0 ? imgs : ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop'],
+          dynamicFields: dynFields,
+          includedItems: included,
+          category: ad.category?.slug || '',
+          seller: {
+            id: ad.user?.id || ad.userId,
+            name: ad.user?.name || 'Seller',
+            badges: ad.user?.isGstVerified ? ['verified'] : [],
+            memberSince: ad.user?.createdAt ? new Date(ad.user.createdAt).getFullYear().toString() : '',
+            adsPosted: ad.user?.adsPosted || 0,
+            responseRate: 95,
+            isOnline: false,
+          },
+        });
+
+        // Fetch seller profile for richer data
+        const sellerId = ad.user?.id || ad.userId;
+        if (sellerId) {
+          fetch(`${API_BASE}/api/seller/${sellerId}`)
+            .then(r => r.json())
+            .then(sellerData => {
+              if (sellerData.seller) {
+                setSeller(sellerData.seller);
+                setListing((prev: any) => ({
+                  ...prev,
+                  seller: {
+                    ...prev.seller,
+                    name: sellerData.seller.name,
+                    badges: sellerData.seller.isGstVerified ? ['verified'] : [],
+                    memberSince: new Date(sellerData.seller.createdAt).getFullYear().toString(),
+                    adsPosted: sellerData.seller.adsPosted || 0,
+                    avatarUrl: sellerData.seller.avatarUrl,
+                    bannerImage: sellerData.seller.bannerImage,
+                    facebookUrl: sellerData.seller.facebookUrl,
+                    instagramUrl: sellerData.seller.instagramUrl,
+                    twitterUrl: sellerData.seller.twitterUrl,
+                  }
+                }));
+              }
+            })
+            .catch(() => { });
+        }
+
+        setLoading(false);
+      })
+      .catch(() => {
+        setListing(null);
+        setLoading(false);
+      });
+  }, [id]);
+
+  // Increment view count
+  useEffect(() => {
+    if (!id) return;
+    fetch(`${API_BASE}/api/ads/${id}/view`, { method: 'POST' }).catch(() => { });
+  }, [id]);
+
+  // Check wishlist status
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token || !id) return;
@@ -50,7 +134,7 @@ const ListingDetail = () => {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(r => r.json())
-      .then(data => { if (data.isSaved) setIsFavorited(true); })
+      .then(data => { if (data.isSaved || data.isWishlisted) setIsFavorited(true); })
       .catch(() => { });
   }, [id]);
 
@@ -74,16 +158,35 @@ const ListingDetail = () => {
     }
   };
 
-  // Fallback for listings that might be missing in mockData during transition
-  const listing = listings.find(l => l.id === id);
-
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
-    toast.success("Link Copied", {
-      description: "Listing link copied to clipboard.",
-    });
+  const handleShare = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: listing?.title, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link Copied", { description: "Listing link copied to clipboard." });
+      }
+    } catch {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link Copied", { description: "Listing link copied to clipboard." });
+    }
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Not found
   if (!listing) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -101,12 +204,7 @@ const ListingDetail = () => {
     );
   }
 
-  // Mock multiple images
-  const images = [
-    listing.images[0],
-    '/placeholder.svg',
-    '/placeholder.svg',
-  ];
+  const images = listing.images;
 
   const timeAgo = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -120,8 +218,7 @@ const ListingDetail = () => {
     return `${Math.floor(diffDays / 30)} months ago`;
   };
 
-  // Safe access for new property with fallback
-  const isSellerOnline = (listing.seller as any).isOnline ?? false;
+  const isSellerOnline = listing.seller?.isOnline ?? false;
 
   const getYouTubeId = (url: string) => {
     const p = /^(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})(?:\S+)?$/;
@@ -229,13 +326,6 @@ const ListingDetail = () => {
                     </>
                   )}
 
-                  {/* Featured Badge */}
-                  {listing.featured && (
-                    <div className="absolute top-4 left-4 px-3 py-1.5 rounded-lg bg-amber text-accent-foreground text-sm font-semibold">
-                      Featured
-                    </div>
-                  )}
-
                   {/* Image Counter */}
                   <div className="absolute bottom-4 right-4 px-3 py-1.5 rounded-lg bg-foreground/80 text-primary-foreground text-sm">
                     {currentImage + 1} / {images.length}
@@ -243,20 +333,22 @@ const ListingDetail = () => {
                 </div>
 
                 {/* Thumbnail Strip */}
-                <div className="flex gap-2 p-4 overflow-x-auto">
-                  {images.map((img, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentImage(idx)}
-                      className={cn(
-                        "w-20 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-colors",
-                        currentImage === idx ? "border-primary" : "border-transparent"
-                      )}
-                    >
-                      <img src={img} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
+                {images.length > 1 && (
+                  <div className="flex gap-2 p-4 overflow-x-auto">
+                    {images.map((img: string, idx: number) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentImage(idx)}
+                        className={cn(
+                          "w-20 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-colors",
+                          currentImage === idx ? "border-primary" : "border-transparent"
+                        )}
+                      >
+                        <img src={img} alt="" className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Product Details */}
@@ -281,9 +373,9 @@ const ListingDetail = () => {
                     <Clock className="h-4 w-4 text-muted-foreground" /> Posted {timeAgo(listing.createdAt)}
                   </span>
                   <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-sm font-medium text-foreground capitalize">
-                    {conditionLabels[listing.condition as keyof typeof conditionLabels]} Condition
+                    {conditionLabels[listing.condition] || listing.condition} Condition
                   </span>
-                  {listing.views && (
+                  {listing.views > 0 && (
                     <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-sm font-medium text-foreground">
                       <Eye className="h-4 w-4 text-muted-foreground" /> {listing.views} Views
                     </span>
@@ -302,7 +394,7 @@ const ListingDetail = () => {
                   <div className="mb-6 p-5 rounded-xl bg-secondary/50 border border-border">
                     <h3 className="font-semibold text-foreground mb-3">Included Extras</h3>
                     <ul className="grid sm:grid-cols-2 gap-3">
-                      {listing.includedItems.map((item, idx) => (
+                      {listing.includedItems.map((item: string, idx: number) => (
                         <li key={idx} className="flex items-center gap-2 text-muted-foreground text-sm font-medium">
                           <Check className="h-4 w-4 text-trust-green shrink-0" />
                           <span>{item}</span>
@@ -433,7 +525,7 @@ const ListingDetail = () => {
                   <div className="mb-6"></div>
                 )}
 
-                {/* Action Buttons: FIXED ALIGNMENT */}
+                {/* Action Buttons */}
                 <div className="hidden lg:flex items-center gap-3 mb-6">
                   <Button
                     variant="accent"
@@ -486,9 +578,12 @@ const ListingDetail = () => {
                   </div>
 
                   <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center relative">
-                      <User className="h-7 w-7 text-primary" />
-                      {/* Avatar Online Status Dot */}
+                    <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center relative overflow-hidden">
+                      {listing.seller.avatarUrl ? (
+                        <img src={listing.seller.avatarUrl} alt={listing.seller.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="h-7 w-7 text-primary" />
+                      )}
                       <span className={cn(
                         "absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-background rounded-full",
                         isSellerOnline ? "bg-green-500" : "bg-red-500"
@@ -510,19 +605,6 @@ const ListingDetail = () => {
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <BarChart3 className="h-4 w-4" />
                       <span>{listing.seller.adsPosted} ads posted</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 p-4 rounded-xl bg-trust-green/10">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-foreground">Response Rate</span>
-                      <span className="font-semibold text-trust-green">{listing.seller.responseRate}%</span>
-                    </div>
-                    <div className="mt-2 h-2 rounded-full bg-secondary overflow-hidden">
-                      <div
-                        className="h-full bg-trust-green rounded-full"
-                        style={{ width: `${listing.seller.responseRate}%` }}
-                      />
                     </div>
                   </div>
 
@@ -571,7 +653,7 @@ const ListingDetail = () => {
         </Button>
       </div>
 
-      {/* Replaced Dialog with WhatsApp-style Chat Sheet */}
+      {/* Chat Sheet */}
       <ChatSheet
         open={isContactOpen}
         onOpenChange={setIsContactOpen}

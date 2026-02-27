@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ArrowRight, Tag } from 'lucide-react';
-import { listings, categories } from '@/data/mockData';
+import API_BASE from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 interface SearchSuggestionsProps {
@@ -12,28 +12,46 @@ interface SearchSuggestionsProps {
 
 const SearchSuggestions = ({ query, onClose, className }: SearchSuggestionsProps) => {
     const navigate = useNavigate();
+    const [categories, setCategories] = useState<any[]>([]);
+    const [products, setProducts] = useState<any[]>([]);
 
-    const suggestions = useMemo(() => {
-        if (!query || query.length < 2) return { categories: [], products: [] };
+    // Debounced search
+    useEffect(() => {
+        if (!query || query.length < 2) {
+            setCategories([]);
+            setProducts([]);
+            return;
+        }
 
-        const lowerQuery = query.toLowerCase();
+        const timer = setTimeout(() => {
+            // Search categories
+            fetch(`${API_BASE}/api/categories`)
+                .then(r => r.json())
+                .then(data => {
+                    const lowerQuery = query.toLowerCase();
+                    const matched = (data.categories || [])
+                        .filter((c: any) =>
+                            c.name.toLowerCase().includes(lowerQuery) ||
+                            c.slug.toLowerCase().includes(lowerQuery)
+                        )
+                        .slice(0, 2);
+                    setCategories(matched);
+                })
+                .catch(() => setCategories([]));
 
-        // Find matching categories
-        const matchedCategories = categories.filter(c =>
-            c.name.toLowerCase().includes(lowerQuery) ||
-            c.slug.toLowerCase().includes(lowerQuery)
-        ).slice(0, 2);
+            // Search ads
+            fetch(`${API_BASE}/api/ads/search?q=${encodeURIComponent(query)}`)
+                .then(r => r.json())
+                .then(data => {
+                    setProducts((data.ads || []).slice(0, 3));
+                })
+                .catch(() => setProducts([]));
+        }, 300);
 
-        // Find matching products
-        const matchedProducts = listings.filter(l =>
-            l.title.toLowerCase().includes(lowerQuery) ||
-            l.description.toLowerCase().includes(lowerQuery)
-        ).slice(0, 3);
-
-        return { categories: matchedCategories, products: matchedProducts };
+        return () => clearTimeout(timer);
     }, [query]);
 
-    if (suggestions.categories.length === 0 && suggestions.products.length === 0) {
+    if (categories.length === 0 && products.length === 0) {
         return null;
     }
 
@@ -47,12 +65,12 @@ const SearchSuggestions = ({ query, onClose, className }: SearchSuggestionsProps
             "absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2",
             className
         )}>
-            {suggestions.categories.length > 0 && (
+            {categories.length > 0 && (
                 <div className="p-2 border-b border-border/50">
                     <p className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                         Categories
                     </p>
-                    {suggestions.categories.map(category => (
+                    {categories.map((category: any) => (
                         <button
                             key={category.id}
                             className="w-full flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors text-left"
@@ -67,16 +85,16 @@ const SearchSuggestions = ({ query, onClose, className }: SearchSuggestionsProps
                 </div>
             )}
 
-            {suggestions.products.length > 0 && (
+            {products.length > 0 && (
                 <div className="p-2">
                     <p className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                         Top Results
                     </p>
-                    {suggestions.products.map(product => (
+                    {products.map((product: any) => (
                         <button
                             key={product.id}
                             className="w-full flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors text-left"
-                            onClick={() => handleSelect(`/listings?q=${encodeURIComponent(product.title)}`)}
+                            onClick={() => handleSelect(`/listing/${product.id}`)}
                         >
                             <Search className="h-4 w-4 text-muted-foreground" />
                             <div className="flex-1 truncate">

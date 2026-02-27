@@ -1,5 +1,4 @@
 import API_BASE from '@/lib/api';
-import { calculateSellerTier } from '@/utils/reputation';
 
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/layout/Header';
@@ -27,40 +26,9 @@ import {
     Camera
 } from 'lucide-react';
 import { ReportDialog } from '@/components/shared/ReportDialog';
-import { mockAds } from './Dashboard'; // Reusing mock ads for now
 import { Seller } from '@/types/marketplace';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-
-// Mock Seller Data (Extended)
-const mockSellerData: Seller = { // Renamed to mockSellerData to distinguish from calculated
-    id: 'user-1',
-    name: 'Rahul Sharma',
-    badges: ['verified', 'trusted'],
-    memberSince: '2023',
-    adsPosted: 45,
-    responseRate: 98,
-    tier: 'Bronze', // Default, will be recalculated
-    stats: {
-        itemsSold: 142,
-        completionRate: 96,
-        transactionCount: 150,
-        disputeCount: 2,
-        responseTime: 'Usually within 1 hour'
-    },
-    followers: 850,
-    rating: 4.8,
-    reviews: [
-        { id: 'r1', authorId: 'u2', authorName: 'Amit K.', rating: 5, comment: 'Product was exactly as described. Fast transaction!', date: '2 days ago' },
-        { id: 'r2', authorId: 'u3', authorName: 'Priya S.', rating: 4, comment: 'Good deal, but location was a bit far.', date: '1 week ago' },
-        { id: 'r3', authorId: 'u4', authorName: 'Vikram R.', rating: 5, comment: 'Highly recommended seller.', date: '3 weeks ago' }
-    ],
-    isVerifiedMobile: true,
-    isVerifiedEmail: true,
-    facebookUrl: 'https://facebook.com/rahulsharma',
-    instagramUrl: 'https://instagram.com/rahul.sharma',
-    twitterUrl: 'https://twitter.com/rahul_trades'
-};
 
 const SellerProfile = () => {
     const { id } = useParams();
@@ -74,7 +42,6 @@ const SellerProfile = () => {
     const bannerInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        // Fetch Current User
         const fetchMe = async () => {
             const token = localStorage.getItem('token');
             if (!token) return;
@@ -90,14 +57,13 @@ const SellerProfile = () => {
         };
         fetchMe();
 
-        // Fetch Public Seller Profile
         const fetchSeller = async () => {
             try {
                 const res = await fetch(`${API_BASE}/api/seller/${id}`);
                 const data = await res.json();
                 if (res.ok) {
                     setFetchedSeller(data.seller);
-                    setFetchedAds(data.ads);
+                    setFetchedAds(data.ads || []);
                 }
             } catch (e) {
                 console.error(e);
@@ -106,12 +72,46 @@ const SellerProfile = () => {
         fetchSeller();
     }, [id]);
 
-    // Calculate dynamic tier (fallback to mocked stats for UI polish)
-    const currentTier = calculateSellerTier(mockSellerData.stats, mockSellerData.rating);
+    // Build seller display from fetched data only
+    const seller = fetchedSeller ? {
+        id: fetchedSeller.id,
+        name: fetchedSeller.name,
+        badges: fetchedSeller.isGstVerified ? ['verified' as const] : [],
+        memberSince: new Date(fetchedSeller.createdAt).getFullYear().toString(),
+        adsPosted: fetchedSeller.adsPosted || 0,
+        responseRate: 95,
+        tier: 'Bronze' as const,
+        stats: {
+            itemsSold: 0,
+            completionRate: 0,
+            transactionCount: 0,
+            disputeCount: 0,
+            responseTime: 'Usually within 1 hour'
+        },
+        followers: 0,
+        rating: 0,
+        reviews: [] as any[],
+        isVerifiedMobile: false,
+        isVerifiedEmail: !!fetchedSeller.email,
+        facebookUrl: fetchedSeller.facebookUrl,
+        instagramUrl: fetchedSeller.instagramUrl,
+        twitterUrl: fetchedSeller.twitterUrl,
+        bannerImage: fetchedSeller.bannerImage,
+        avatarUrl: fetchedSeller.avatarUrl,
+    } : null;
 
-    // Merge calculated tier into data for display
-    const mockSeller = fetchedSeller ? { ...mockSellerData, ...fetchedSeller, tier: currentTier } : { ...mockSellerData, tier: currentTier };
-    const displayAds = fetchedAds.length > 0 ? fetchedAds : mockAds.slice(0, 4);
+    // Transform fetched ads for ListingCard
+    const displayAds = fetchedAds.map((ad: any) => {
+        let imgs: string[] = [];
+        try { imgs = typeof ad.images === 'string' ? JSON.parse(ad.images) : (ad.images || []); } catch { imgs = []; }
+        return {
+            ...ad,
+            images: imgs.length > 0 ? imgs : ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop'],
+            category: ad.category?.slug || '',
+            condition: ad.condition || 'used',
+            seller: seller ? { id: seller.id, name: seller.name, badges: seller.badges } : { id: '', name: 'Seller', badges: [] },
+        };
+    });
 
     const isOwner = currentUser?.id === id;
 
@@ -119,9 +119,9 @@ const SellerProfile = () => {
     const handleFollow = () => {
         setIsFollowing(!isFollowing);
         if (!isFollowing) {
-            toast.success(`You are now following ${mockSeller.name}`);
+            toast.success(`You are now following ${seller?.name}`);
         } else {
-            toast.info(`Unfollowed ${mockSeller.name}`);
+            toast.info(`Unfollowed ${seller?.name}`);
         }
     };
 
@@ -132,7 +132,7 @@ const SellerProfile = () => {
     };
 
     const handleBlock = () => {
-        toast.error(`Blocked ${mockSeller.name}`, {
+        toast.error(`Blocked ${seller?.name}`, {
             description: "You will no longer see listings from this seller."
         });
     };
@@ -199,8 +199,8 @@ const SellerProfile = () => {
 
                     {/* Banner Image Area */}
                     <div className="relative w-full h-48 md:h-64 rounded-t-3xl overflow-hidden group border border-border bg-muted">
-                        {mockSeller.bannerImage ? (
-                            <img src={mockSeller.bannerImage} alt="Profile Cover" className="w-full h-full object-cover" />
+                        {seller?.bannerImage ? (
+                            <img src={seller?.bannerImage} alt="Profile Cover" className="w-full h-full object-cover" />
                         ) : (
                             <div className="w-full h-full bg-gradient-to-r from-slate-200 to-slate-100 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center relative overflow-hidden">
                                 {/* Abstract pattern for default cover */}
@@ -226,10 +226,10 @@ const SellerProfile = () => {
                             <div className="flex flex-col items-center gap-4">
                                 <div className="w-32 h-32 rounded-full bg-secondary border-4 border-background shadow-xl overflow-hidden">
                                     <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary text-4xl">
-                                        {mockSeller.name.charAt(0)}
+                                        {seller?.name.charAt(0)}
                                     </div>
                                 </div>
-                                <ReputationBadge tier={mockSeller.tier} size="md" />
+                                <ReputationBadge tier={seller?.tier} size="md" />
                             </div>
 
                             {/* Info */}
@@ -237,12 +237,12 @@ const SellerProfile = () => {
                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                     <div>
                                         <h1 className="text-3xl font-display font-bold text-foreground flex items-center gap-3">
-                                            {mockSeller.name}
-                                            <TrustBadges badges={mockSeller.badges} showLabels={false} />
+                                            {seller?.name}
+                                            <TrustBadges badges={seller?.badges} showLabels={false} />
                                         </h1>
                                         <div className="flex items-center gap-4 text-muted-foreground mt-2 text-sm">
                                             <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> Mumbai, India</span>
-                                            <span className="flex items-center gap-1"><Calendar className="h-4 w-4" /> Member since {mockSeller.memberSince}</span>
+                                            <span className="flex items-center gap-1"><Calendar className="h-4 w-4" /> Member since {seller?.memberSince}</span>
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
@@ -252,7 +252,7 @@ const SellerProfile = () => {
                                         <Button variant="outline" className="gap-2" onClick={handleChat}>
                                             <MessageCircle className="h-4 w-4" /> Chat
                                         </Button>
-                                        <ReportDialog sellerName={mockSeller.name} />
+                                        <ReportDialog sellerName={seller?.name} />
                                         <Button variant="ghost" size="icon" onClick={handleBlock} title="Block User">
                                             <Ban className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                                         </Button>
@@ -260,20 +260,20 @@ const SellerProfile = () => {
                                 </div>
 
                                 {/* Social URLs */}
-                                {(mockSeller.facebookUrl || mockSeller.instagramUrl || mockSeller.twitterUrl) && (
+                                {(seller?.facebookUrl || seller?.instagramUrl || seller?.twitterUrl) && (
                                     <div className="flex items-center gap-3">
-                                        {mockSeller.facebookUrl && (
-                                            <a href={mockSeller.facebookUrl} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-secondary hover:bg-secondary/80 text-blue-600 transition-colors">
+                                        {seller?.facebookUrl && (
+                                            <a href={seller?.facebookUrl} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-secondary hover:bg-secondary/80 text-blue-600 transition-colors">
                                                 <Facebook className="h-4 w-4" />
                                             </a>
                                         )}
-                                        {mockSeller.instagramUrl && (
-                                            <a href={mockSeller.instagramUrl} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-secondary hover:bg-secondary/80 text-pink-600 transition-colors">
+                                        {seller?.instagramUrl && (
+                                            <a href={seller?.instagramUrl} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-secondary hover:bg-secondary/80 text-pink-600 transition-colors">
                                                 <Instagram className="h-4 w-4" />
                                             </a>
                                         )}
-                                        {mockSeller.twitterUrl && (
-                                            <a href={mockSeller.twitterUrl} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-secondary hover:bg-secondary/80 text-sky-500 transition-colors">
+                                        {seller?.twitterUrl && (
+                                            <a href={seller?.twitterUrl} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-secondary hover:bg-secondary/80 text-sky-500 transition-colors">
                                                 <Twitter className="h-4 w-4" />
                                             </a>
                                         )}
@@ -282,19 +282,19 @@ const SellerProfile = () => {
 
                                 <div className="flex flex-wrap gap-6 p-4 bg-background/50 rounded-xl border border-border/50">
                                     <div className="text-center md:text-left">
-                                        <div className="text-2xl font-bold font-display">{mockSeller.followers}</div>
+                                        <div className="text-2xl font-bold font-display">{seller?.followers}</div>
                                         <div className="text-xs text-muted-foreground uppercase tracking-wider">Followers</div>
                                     </div>
                                     <div className="w-px bg-border h-10 hidden md:block" />
                                     <div className="text-center md:text-left">
                                         <div className="text-2xl font-bold font-display flex items-center gap-1">
-                                            {mockSeller.rating} <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                                            {seller?.rating} <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
                                         </div>
                                         <div className="text-xs text-muted-foreground uppercase tracking-wider">Rating</div>
                                     </div>
                                     <div className="w-px bg-border h-10 hidden md:block" />
                                     <div className="text-center md:text-left">
-                                        <div className="text-2xl font-bold font-display">{mockSeller.stats.itemsSold}</div>
+                                        <div className="text-2xl font-bold font-display">{seller?.stats.itemsSold}</div>
                                         <div className="text-xs text-muted-foreground uppercase tracking-wider">Items Sold</div>
                                     </div>
                                 </div>
@@ -314,25 +314,25 @@ const SellerProfile = () => {
                                         <span className="text-sm text-muted-foreground flex items-center gap-2">
                                             <CheckCircle2 className="h-4 w-4 text-trust-green" /> Completion Rate
                                         </span>
-                                        <span className="font-medium">{mockSeller.stats.completionRate}%</span>
+                                        <span className="font-medium">{seller?.stats.completionRate}%</span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-sm text-muted-foreground flex items-center gap-2">
                                             <ShoppingBag className="h-4 w-4 text-primary" /> Total Transactions
                                         </span>
-                                        <span className="font-medium">{mockSeller.stats.transactionCount}</span>
+                                        <span className="font-medium">{seller?.stats.transactionCount}</span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-sm text-muted-foreground flex items-center gap-2">
                                             <AlertCircle className="h-4 w-4 text-destructive" /> Disputes
                                         </span>
-                                        <span className="font-medium">{mockSeller.stats.disputeCount}</span>
+                                        <span className="font-medium">{seller?.stats.disputeCount}</span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-sm text-muted-foreground flex items-center gap-2">
                                             <MessageCircle className="h-4 w-4 text-blue-500" /> Response Time
                                         </span>
-                                        <span className="font-medium text-xs text-right">{mockSeller.stats.responseTime}</span>
+                                        <span className="font-medium text-xs text-right">{seller?.stats.responseTime}</span>
                                     </div>
                                 </div>
                             </div>
@@ -342,21 +342,21 @@ const SellerProfile = () => {
                                 <h3 className="font-display font-semibold mb-4 text-lg">Verifications</h3>
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-full ${mockSeller.isVerifiedMobile ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                                        <div className={`p-2 rounded-full ${seller?.isVerifiedMobile ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
                                             <Smartphone className="h-4 w-4" />
                                         </div>
                                         <div>
                                             <div className="font-medium text-sm">Phone Verified</div>
-                                            <div className="text-xs text-muted-foreground">{mockSeller.isVerifiedMobile ? 'Verified via OTP' : 'Pending'}</div>
+                                            <div className="text-xs text-muted-foreground">{seller?.isVerifiedMobile ? 'Verified via OTP' : 'Pending'}</div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-full ${mockSeller.isVerifiedEmail ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                                        <div className={`p-2 rounded-full ${seller?.isVerifiedEmail ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
                                             <Mail className="h-4 w-4" />
                                         </div>
                                         <div>
                                             <div className="font-medium text-sm">Email Verified</div>
-                                            <div className="text-xs text-muted-foreground">{mockSeller.isVerifiedEmail ? 'Verified via Link' : 'Pending'}</div>
+                                            <div className="text-xs text-muted-foreground">{seller?.isVerifiedEmail ? 'Verified via Link' : 'Pending'}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -400,7 +400,7 @@ const SellerProfile = () => {
                             <div>
                                 <h3 className="font-display font-semibold text-xl mb-4">Latest Reviews</h3>
                                 <div className="space-y-4">
-                                    {mockSeller.reviews.map(review => (
+                                    {seller?.reviews.map(review => (
                                         <div key={review.id} className="card-premium p-4">
                                             <div className="flex justify-between items-start mb-2">
                                                 <div className="flex items-center gap-2">

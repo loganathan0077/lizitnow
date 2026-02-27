@@ -5,60 +5,66 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ListingCard from '@/components/listings/ListingCard';
 import { Button } from '@/components/ui/button';
-import { SlidersHorizontal, X } from 'lucide-react';
-import { Category, Subcategory } from '@/pages/PostAd'; // reuse types
-import { listings as mockListings } from '@/data/mockData';
 
 const CategoryView = () => {
     const { categorySlug, subcategorySlug } = useParams();
     const [ads, setAds] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-
-    // To display category name/title nicely
     const [categoryName, setCategoryName] = useState('');
 
     useEffect(() => {
         const fetchAds = async () => {
             setIsLoading(true);
             try {
-                // Fetch ads from our backend
-                let url = `${API_BASE}/api/ads?`;
+                const params = new URLSearchParams();
                 if (subcategorySlug) {
-                    url += `subcategorySlug=${subcategorySlug}`;
+                    params.set('subcategorySlug', subcategorySlug);
                 } else if (categorySlug) {
-                    url += `categorySlug=${categorySlug}`;
+                    params.set('categorySlug', categorySlug);
                 }
 
-                const res = await fetch(url);
+                const res = await fetch(`${API_BASE}/api/ads/search?${params.toString()}`);
                 if (res.ok) {
                     const data = await res.json();
                     if (data.ads && Array.isArray(data.ads)) {
-                        // Transform strict prisma ad fields to match frontend ListingCard requirements if needed
-                        const formattedAds = data.ads.map((ad: any) => ({
-                            ...ad,
-                            images: ad.images ? JSON.parse(ad.images) : [],
-                            dynamicFields: ad.dynamicData ? JSON.parse(ad.dynamicData) : undefined,
-                            category: ad.category?.name || 'Unknown', // To satisfy mock ListingCard safely
-                            seller: { name: 'Verified User', badges: ['trusted'] } // Mock seller inner for now
-                        }));
+                        const formattedAds = data.ads.map((ad: any) => {
+                            let imgs: string[] = [];
+                            try { imgs = typeof ad.images === 'string' ? JSON.parse(ad.images) : (ad.images || []); } catch { imgs = []; }
+                            let dynFields: Record<string, any> = {};
+                            try { dynFields = ad.dynamicData ? (typeof ad.dynamicData === 'string' ? JSON.parse(ad.dynamicData) : ad.dynamicData) : {}; } catch { }
 
-                        let combinedAds = formattedAds;
-                        if (combinedAds.length === 0) {
-                            const sampleAds = mockListings.filter(l => l.category === categorySlug);
-                            combinedAds = [...combinedAds, ...sampleAds];
-                        }
-
-                        setAds(combinedAds);
+                            return {
+                                ...ad,
+                                images: imgs.length > 0 ? imgs : ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop'],
+                                dynamicFields: dynFields,
+                                category: ad.category?.slug || '',
+                                condition: ad.condition || 'used',
+                                seller: {
+                                    id: ad.user?.id || ad.userId,
+                                    name: ad.user?.name || 'Seller',
+                                    badges: ad.user?.isGstVerified ? ['verified'] : [],
+                                    memberSince: '',
+                                    adsPosted: 0,
+                                    responseRate: 0,
+                                    tier: 'Bronze',
+                                    stats: { itemsSold: 0, completionRate: 0, transactionCount: 0, disputeCount: 0, responseTime: '' },
+                                    followers: 0,
+                                    rating: 0,
+                                    reviews: [],
+                                    isVerifiedMobile: false,
+                                    isVerifiedEmail: false,
+                                },
+                            };
+                        });
+                        setAds(formattedAds);
                     } else {
-                        const sampleAds = mockListings.filter(l => l.category === categorySlug);
-                        setAds(sampleAds);
+                        setAds([]);
                     }
                 } else {
-                    const sampleAds = mockListings.filter(l => l.category === categorySlug);
-                    setAds(sampleAds);
+                    setAds([]);
                 }
 
-                // Let's also fetch the category name if we only have the slug
+                // Fetch category name
                 const catRes = await fetch(`${API_BASE}/api/categories`);
                 if (catRes.ok) {
                     const catData = await catRes.json();
@@ -74,6 +80,7 @@ const CategoryView = () => {
                 }
             } catch (err) {
                 console.error(err);
+                setAds([]);
             } finally {
                 setIsLoading(false);
             }

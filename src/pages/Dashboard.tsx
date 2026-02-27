@@ -45,38 +45,6 @@ import {
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
-// Mock user data
-const mockUser = {
-  name: 'Rahul Sharma',
-  email: 'rahul@example.com',
-  phone: '+91 98765 43210',
-  bio: 'Avid collector of vintage electronics and gadgets.',
-  socials: {
-    facebook: '',
-    instagram: '',
-    twitter: ''
-  },
-  walletBalance: 15,
-  badges: [] as string[],
-  totalAds: 8,
-  activeAds: 5,
-  pendingAds: 2,
-  rejectedAds: 1,
-};
-
-export const mockAds = [
-  { id: '1', title: 'iPhone 14 Pro Max - 256GB', status: 'active', views: 234, price: 89999 },
-  { id: '2', title: 'MacBook Air M2', status: 'active', views: 156, price: 84999 },
-  { id: '3', title: 'Samsung Galaxy Watch', status: 'pending', views: 0, price: 15000 },
-  { id: '4', title: 'Sony Headphones WH-1000XM4', status: 'pending', views: 0, price: 18000 },
-  { id: '5', title: 'Old Laptop (Rejected)', status: 'rejected', views: 0, price: 5000 },
-];
-
-const mockWishlistItems = [
-  { id: 'w1', title: 'Nintendo Switch OLED', price: 28000, category: 'Gaming', image: 'bg-red-100' },
-  { id: 'w2', title: 'Canon EOS R50 Camera', price: 55000, category: 'Cameras', image: 'bg-blue-100' },
-  { id: 'w3', title: 'Vintage Leather Jacket', price: 4500, category: 'Fashion', image: 'bg-amber-100' },
-];
 
 const sidebarLinks = [
   { icon: FileText, label: 'My Ads', href: '/dashboard', count: 8 },

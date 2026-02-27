@@ -259,10 +259,6 @@ const PostAd = () => {
 
             const adData = await res.json();
 
-            // 3. Save to LocalStorage mock as fallback
-            const existingAds = JSON.parse(localStorage.getItem('myAds') || '[]');
-            localStorage.setItem('myAds', JSON.stringify([adData.ad, ...existingAds]));
-
             setIsSubmitting(false);
 
             toast.success('Ad Posted Successfully!', {
