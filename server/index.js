@@ -146,7 +146,10 @@ app.get('/api/auth/me', authenticate, async (req, res) => {
             select: {
                 id: true, name: true, email: true, phone: true, role: true,
                 walletBalance: true, referralCode: true, membershipExpiry: true,
-                adsPosted: true, gstin: true
+                adsPosted: true, gstin: true, createdAt: true,
+                avatarUrl: true, bannerImage: true, address: true,
+                facebookUrl: true, instagramUrl: true, twitterUrl: true,
+                isGstVerified: true
             }
         });
         if (!user) return res.status(404).json({ error: 'User not found' });
