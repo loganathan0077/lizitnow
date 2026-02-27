@@ -122,6 +122,8 @@ model Ad {
   images        String      // JSON string of image URLs
   condition     String
   location      String
+  latitude      Float?
+  longitude     Float?
   status        String      @default("active") // active, pending, rejected, sold
   userId        String
   categoryId    String

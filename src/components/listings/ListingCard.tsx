@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom';
-import { MapPin, Clock } from 'lucide-react';
+import { MapPin, Clock, Heart, Share2 } from 'lucide-react';
 import { Listing } from '@/types/marketplace';
 import { TrustBadges } from '@/components/shared/TrustBadges';
 import { formatPrice } from '@/data/mockData';
 import { cn } from '@/lib/utils';
+import API_BASE from '@/lib/api';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 
 interface ListingCardProps {
   listing: Listing;
@@ -23,6 +26,82 @@ const conditionColors = {
 };
 
 const ListingCard = ({ listing, featured }: ListingCardProps) => {
+  const [wishlisted, setWishlisted] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+
+  const isAuthenticated = !!localStorage.getItem('token');
+
+  // Check wishlist status on mount
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const token = localStorage.getItem('token');
+    fetch(`${API_BASE}/api/wishlist/status/${listing.id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => setWishlisted(!!data.isWishlisted))
+      .catch(() => { });
+  }, [listing.id, isAuthenticated]);
+
+  const toggleWishlist = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      toast.error('Please login to add to wishlist');
+      return;
+    }
+    setWishlistLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (wishlisted) {
+        await fetch(`${API_BASE}/api/wishlist/${listing.id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setWishlisted(false);
+        toast.success('Removed from wishlist');
+      } else {
+        await fetch(`${API_BASE}/api/wishlist/${listing.id}`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setWishlisted(true);
+        toast.success('Added to wishlist');
+      }
+    } catch {
+      toast.error('Failed to update wishlist');
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = `${window.location.origin}/listing/${listing.id}`;
+    const shareData = {
+      title: listing.title,
+      text: `Check out: ${listing.title} - ${formatPrice(listing.price)}`,
+      url,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success('Link copied to clipboard!');
+      }
+    } catch {
+      // User cancelled share dialog or clipboard failed
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.success('Link copied to clipboard!');
+      } catch {
+        toast.error('Failed to share');
+      }
+    }
+  };
+
   const timeAgo = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
@@ -64,6 +143,30 @@ const ListingCard = ({ listing, featured }: ListingCardProps) => {
           conditionColors[listing.condition]
         )}>
           {conditionLabels[listing.condition]}
+        </div>
+
+        {/* Action Icons - Bottom Right Overlay */}
+        <div className="absolute bottom-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <button
+            onClick={handleShare}
+            className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors"
+            title="Share"
+          >
+            <Share2 className="h-3.5 w-3.5 text-white" />
+          </button>
+          <button
+            onClick={toggleWishlist}
+            disabled={wishlistLoading}
+            className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors disabled:opacity-50"
+            title={wishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
+          >
+            <Heart
+              className={cn(
+                "h-3.5 w-3.5 transition-colors",
+                wishlisted ? "fill-red-500 text-red-500" : "text-white"
+              )}
+            />
+          </button>
         </div>
       </div>
 

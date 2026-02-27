@@ -263,6 +263,85 @@ app.get('/api/ads', async (req, res) => {
     }
 });
 
+// Search Ads with Distance Filter (Haversine)
+app.get('/api/ads/search', async (req, res) => {
+    try {
+        const { lat, lng, radius, categorySlug, subcategorySlug, condition, q, sort, minPrice, maxPrice } = req.query;
+
+        let where = { status: 'active' };
+
+        if (subcategorySlug) {
+            where.subcategory = { slug: subcategorySlug };
+        } else if (categorySlug && categorySlug !== 'all') {
+            if (categorySlug === 'b2b') {
+                where.isB2B = true;
+            } else {
+                where.category = { slug: categorySlug };
+            }
+        }
+
+        if (condition && condition !== 'all') {
+            where.condition = condition;
+        }
+
+        if (q) {
+            where.OR = [
+                { title: { contains: q, mode: 'insensitive' } },
+                { description: { contains: q, mode: 'insensitive' } }
+            ];
+        }
+
+        if (minPrice || maxPrice) {
+            where.price = {};
+            if (minPrice) where.price.gte = parseFloat(minPrice);
+            if (maxPrice) where.price.lte = parseFloat(maxPrice);
+        }
+
+        let orderBy = { createdAt: 'desc' };
+        if (sort === 'price-low') orderBy = { price: 'asc' };
+        if (sort === 'price-high') orderBy = { price: 'desc' };
+
+        let ads = await prisma.ad.findMany({
+            where,
+            include: {
+                category: true,
+                subcategory: true,
+                user: { select: { id: true, name: true, isGstVerified: true, avatarUrl: true } }
+            },
+            orderBy
+        });
+
+        // Apply Haversine distance filter if lat, lng, and radius provided
+        if (lat && lng && radius) {
+            const userLat = parseFloat(lat);
+            const userLng = parseFloat(lng);
+            const maxDist = parseFloat(radius);
+
+            const toRad = (deg) => deg * (Math.PI / 180);
+
+            ads = ads
+                .filter(ad => ad.latitude !== null && ad.longitude !== null)
+                .map(ad => {
+                    const dLat = toRad(ad.latitude - userLat);
+                    const dLng = toRad(ad.longitude - userLng);
+                    const a = Math.sin(dLat / 2) ** 2 +
+                        Math.cos(toRad(userLat)) * Math.cos(toRad(ad.latitude)) *
+                        Math.sin(dLng / 2) ** 2;
+                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                    const distance = 6371 * c; // Earth radius in km
+                    return { ...ad, distance: Math.round(distance * 10) / 10 };
+                })
+                .filter(ad => ad.distance <= maxDist)
+                .sort((a, b) => a.distance - b.distance);
+        }
+
+        res.json({ ads });
+    } catch (error) {
+        console.error('[ads/search] Error:', error);
+        res.status(500).json({ error: 'Search failed' });
+    }
+});
+
 // Get User Ads
 app.get('/api/user/ads', authenticate, async (req, res) => {
     try {
@@ -390,7 +469,8 @@ app.post('/api/ads/post', authenticate, async (req, res) => {
         const {
             title, description, price, categoryId, subcategoryId,
             condition, location, images, dynamicData, includedItems, videoUrl, mapUrl,
-            isB2B, b2bMoq, b2bPricePerUnit, b2bStock, b2bBusinessName, b2bGstNumber, b2bDelivery
+            isB2B, b2bMoq, b2bPricePerUnit, b2bStock, b2bBusinessName, b2bGstNumber, b2bDelivery,
+            latitude, longitude
         } = req.body;
 
         const category = await prisma.category.findUnique({
@@ -481,10 +561,12 @@ app.post('/api/ads/post', authenticate, async (req, res) => {
                     b2bGstNumber: isB2B ? b2bGstNumber : null,
                     b2bDelivery: isB2B ? !!b2bDelivery : null,
                     expiresAt,
-                    status: adStatus, // Uses dynamic status for flagged ads
+                    status: adStatus,
                     validityDays,
                     pricePaid: priceToDeduct,
-                    adPlanType
+                    adPlanType,
+                    latitude: latitude ? parseFloat(latitude) : null,
+                    longitude: longitude ? parseFloat(longitude) : null
                 }
             });
 

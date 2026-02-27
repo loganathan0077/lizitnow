@@ -218,14 +218,29 @@ const PostAd = () => {
         setIsSubmitting(true);
 
         try {
+            // Capture geolocation silently (non-blocking)
+            let latitude: number | null = null;
+            let longitude: number | null = null;
+            try {
+                const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+                });
+                latitude = pos.coords.latitude;
+                longitude = pos.coords.longitude;
+            } catch {
+                // Geolocation denied or unavailable — continue without coordinates
+            }
+
             const payload = {
                 ...formData,
-                price: formData.isB2B ? 0 : Number(formData.price), // Fallback price for B2B since they use price per unit
+                price: formData.isB2B ? 0 : Number(formData.price),
                 images: ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop'], // Hardcoded for now
                 dynamicData: Object.keys(dynamicFields).length > 0 ? dynamicFields : undefined,
                 includedItems: includedItems.trim() ? includedItems.split(',').map(i => i.trim()) : undefined,
                 videoUrl: formData.videoUrl || undefined,
-                mapUrl: formData.mapUrl || undefined
+                mapUrl: formData.mapUrl || undefined,
+                latitude,
+                longitude
             };
 
             const token = localStorage.getItem('token');

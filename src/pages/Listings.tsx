@@ -25,7 +25,8 @@ import {
   Dumbbell,
   Dog,
   PartyPopper,
-  Factory
+  Factory,
+  Locate
 } from 'lucide-react';
 import { listings, formatPrice, locations } from '@/data/mockData';
 import { cn } from '@/lib/utils';
@@ -113,6 +114,21 @@ const Listings = () => {
   const [b2bMaxMoq, setB2bMaxMoq] = useState<number | ''>('');
   const [b2bInStock, setB2bInStock] = useState(false);
   const [b2bDelivery, setB2bDelivery] = useState(false);
+
+  // Distance filter
+  const [distanceRange, setDistanceRange] = useState('all');
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [detectingLocation, setDetectingLocation] = useState(false);
+
+  // Detect user location on mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => { } // silently fail
+      );
+    }
+  }, []);
 
   const [dynamicFilters, setDynamicFilters] = useState<Record<string, string>>({});
 
@@ -277,6 +293,8 @@ const Listings = () => {
     setB2bInStock(false);
     setB2bDelivery(false);
 
+    setDistanceRange('all');
+
     setDynamicFilters({});
 
     searchParams.delete('q');
@@ -400,6 +418,42 @@ const Listings = () => {
                     onChange={handleLocationChange}
                     className="w-full h-10 px-3 rounded-lg bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 hover:bg-secondary/90 transition-colors"
                   />
+                </div>
+
+                {/* Distance Filter */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Distance Range</Label>
+                  {userCoords ? (
+                    <select
+                      value={distanceRange}
+                      onChange={(e) => setDistanceRange(e.target.value)}
+                      className="w-full h-10 px-3 rounded-lg bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="all">Any Distance</option>
+                      <option value="25">Within 25 KM</option>
+                      <option value="50">Within 50 KM</option>
+                      <option value="100">Within 100 KM</option>
+                      <option value="200">Within 200 KM</option>
+                    </select>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setDetectingLocation(true);
+                        navigator.geolocation.getCurrentPosition(
+                          (pos) => {
+                            setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                            setDetectingLocation(false);
+                          },
+                          () => setDetectingLocation(false)
+                        );
+                      }}
+                      disabled={detectingLocation}
+                      className="w-full h-10 px-3 rounded-lg bg-secondary text-sm text-muted-foreground flex items-center gap-2 hover:bg-secondary/80 transition-colors disabled:opacity-50"
+                    >
+                      <Locate className="h-4 w-4" />
+                      {detectingLocation ? 'Detecting...' : 'Enable location for distance filter'}
+                    </button>
+                  )}
                 </div>
 
                 {/* Sale Type */}
@@ -623,6 +677,42 @@ const Listings = () => {
                       onChange={handleLocationChange}
                       className="w-full h-10 px-3 rounded-lg bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 hover:bg-secondary/90"
                     />
+                  </div>
+
+                  {/* Distance Filter Mobile */}
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Distance Range</Label>
+                    {userCoords ? (
+                      <select
+                        value={distanceRange}
+                        onChange={(e) => setDistanceRange(e.target.value)}
+                        className="w-full h-10 px-3 rounded-lg bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      >
+                        <option value="all">Any Distance</option>
+                        <option value="25">Within 25 KM</option>
+                        <option value="50">Within 50 KM</option>
+                        <option value="100">Within 100 KM</option>
+                        <option value="200">Within 200 KM</option>
+                      </select>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setDetectingLocation(true);
+                          navigator.geolocation.getCurrentPosition(
+                            (pos) => {
+                              setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                              setDetectingLocation(false);
+                            },
+                            () => setDetectingLocation(false)
+                          );
+                        }}
+                        disabled={detectingLocation}
+                        className="w-full h-10 px-3 rounded-lg bg-secondary text-sm text-muted-foreground flex items-center gap-2 hover:bg-secondary/80 transition-colors disabled:opacity-50"
+                      >
+                        <Locate className="h-4 w-4" />
+                        {detectingLocation ? 'Detecting...' : 'Enable location for distance filter'}
+                      </button>
+                    )}
                   </div>
 
                   {/* Sale Type Mobile */}
