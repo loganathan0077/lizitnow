@@ -1,4 +1,4 @@
-import API_BASE from '@/lib/api';
+import API_BASE, { fetchWithRetry } from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
@@ -8,10 +8,10 @@ const CategoryNav = () => {
     const [categories, setCategories] = useState<any[]>([]);
 
     useEffect(() => {
-        fetch(`${API_BASE}/api/categories`)
+        fetchWithRetry(`${API_BASE}/api/categories`)
             .then(res => res.json())
             .then(data => setCategories(data.categories || []))
-            .catch(err => console.error(err));
+            .catch(err => console.error('CategoryNav fetch failed:', err));
     }, []);
 
     if (categories.length === 0) return null;
