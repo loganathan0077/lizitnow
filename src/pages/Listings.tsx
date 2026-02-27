@@ -28,7 +28,7 @@ import {
   Factory,
   Locate
 } from 'lucide-react';
-import { listings, formatPrice, locations } from '@/data/mockData';
+import { formatPrice, locations } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { useLocationContext } from '@/context/LocationContext';
 import { LocationFilter } from '@/components/shared/LocationFilter';
@@ -132,27 +132,97 @@ const Listings = () => {
 
   const [dynamicFilters, setDynamicFilters] = useState<Record<string, string>>({});
 
+  // Real backend ads + loading state
+  const [backendAds, setBackendAds] = useState<any[]>([]);
+  const [adsLoading, setAdsLoading] = useState(true);
+
+  // Fetch real ads from backend
+  useEffect(() => {
+    setAdsLoading(true);
+    const params = new URLSearchParams();
+
+    if (activeCategory && activeCategory !== 'all') {
+      params.set('categorySlug', activeCategory);
+    }
+    if (condition !== 'all') params.set('condition', condition);
+    if (globalSearch) params.set('q', globalSearch);
+    if (sortBy) params.set('sort', sortBy);
+    if (priceRange[0] !== '' && priceRange[0] > 0) params.set('minPrice', String(priceRange[0]));
+    if (priceRange[1] !== '') params.set('maxPrice', String(priceRange[1]));
+    if (distanceRange !== 'all' && userCoords) {
+      params.set('lat', String(userCoords.lat));
+      params.set('lng', String(userCoords.lng));
+      params.set('radius', distanceRange);
+    }
+
+    fetch(`${API_BASE}/api/ads/search?${params.toString()}`)
+      .then(res => res.json())
+      .then(data => {
+        setBackendAds(data.ads || []);
+        setAdsLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch ads:', err);
+        setAdsLoading(false);
+      });
+  }, [activeCategory, condition, globalSearch, sortBy, priceRange, distanceRange, userCoords]);
+
+  // Transform backend ads to Listing type + apply remaining client-side filters
   const filteredListings = useMemo(() => {
-    let result = [...listings];
+    let result = backendAds.map((ad: any) => {
+      let imgs: string[] = [];
+      try { imgs = JSON.parse(ad.images || '[]'); } catch { imgs = []; }
+      let dynFields: Record<string, any> = {};
+      try { dynFields = ad.dynamicData ? JSON.parse(ad.dynamicData) : {}; } catch { }
+      let included: string[] = [];
+      try { included = ad.includedItems ? JSON.parse(ad.includedItems) : []; } catch { }
 
-    // Global Search (from Header)
-    if (globalSearch) {
-      const query = globalSearch.toLowerCase();
-      result = result.filter(l =>
-        l.title.toLowerCase().includes(query) ||
-        l.description.toLowerCase().includes(query) ||
-        l.category.toLowerCase().includes(query)
-      );
-    }
+      return {
+        id: ad.id,
+        title: ad.title,
+        description: ad.description,
+        price: ad.price,
+        images: imgs.length > 0 ? imgs : ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop'],
+        category: ad.category?.slug || '',
+        condition: ad.condition as any,
+        location: ad.location,
+        seller: {
+          id: ad.user?.id || ad.userId,
+          name: ad.user?.name || 'Seller',
+          badges: ad.user?.isGstVerified ? ['verified' as const] : [],
+          memberSince: '',
+          adsPosted: 0,
+          responseRate: 0,
+          tier: 'Bronze' as const,
+          stats: { itemsSold: 0, completionRate: 0, transactionCount: 0, disputeCount: 0, responseTime: '' },
+          followers: 0,
+          rating: 0,
+          reviews: [],
+          isVerifiedMobile: false,
+          isVerifiedEmail: false,
+        },
+        createdAt: ad.createdAt,
+        status: ad.status,
+        expiresAt: ad.expiresAt,
+        includedItems: included,
+        videoUrl: ad.videoUrl,
+        mapUrl: ad.mapUrl,
+        views: ad.views,
+        dynamicFields: dynFields,
+        isB2B: ad.isB2B,
+        b2bMoq: ad.b2bMoq,
+        b2bPricePerUnit: ad.b2bPricePerUnit,
+        b2bStock: ad.b2bStock,
+        b2bBusinessName: ad.b2bBusinessName,
+        b2bGstNumber: ad.b2bGstNumber,
+        b2bDelivery: ad.b2bDelivery,
+        distance: ad.distance, // from Haversine
+      };
+    });
 
-    // Filter by category
-    if (activeCategory === 'b2b') {
-      result = result.filter(l => l.isB2B === true);
-    } else if (activeCategory !== 'all') {
-      result = result.filter(l => l.category === activeCategory);
-    }
+    // Client-side filters not handled by backend
 
-    // 1. Sale Type Filter
+    // Sale Type
     if (saleType !== 'all') {
       if (saleType === 'b2b') {
         result = result.filter(l => l.isB2B === true);
@@ -161,60 +231,40 @@ const Listings = () => {
       }
     }
 
-    // 2. Posted Date Filter
+    // Posted Date Filter
     if (postedWithin !== 'all') {
       const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(); // Start of today
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
       result = result.filter(l => {
         const adDate = new Date(l.createdAt).getTime();
         switch (postedWithin) {
-          case 'today':
-            return adDate >= today;
-          case '3days':
-            return adDate >= today - 3 * 24 * 60 * 60 * 1000;
-          case '7days':
-            return adDate >= today - 7 * 24 * 60 * 60 * 1000;
-          case '30days':
-            return adDate >= today - 30 * 24 * 60 * 60 * 1000;
-          default:
-            return true;
+          case 'today': return adDate >= today;
+          case '3days': return adDate >= today - 3 * 24 * 60 * 60 * 1000;
+          case '7days': return adDate >= today - 7 * 24 * 60 * 60 * 1000;
+          case '30days': return adDate >= today - 30 * 24 * 60 * 60 * 1000;
+          default: return true;
         }
       });
     }
 
-    // 3. Verified Seller Filter
+    // Verified Seller Filter
     if (verifiedOnly) {
       result = result.filter(l => l.seller.badges && l.seller.badges.includes('verified'));
     }
 
-    // Filter by condition
-    if (condition !== 'all') {
-      result = result.filter(l => l.condition === condition);
-    }
-
-    // Filter by price
-    const minPrice = priceRange[0] === '' ? 0 : priceRange[0];
-    const maxPrice = priceRange[1] === '' ? Infinity : priceRange[1];
-
-    // Check against appropriate price based on B2B status
-    result = result.filter(l => {
-      const itemPrice = l.isB2B && saleType !== 'retail' && l.b2bPricePerUnit ? l.b2bPricePerUnit : l.price;
-      return itemPrice >= minPrice && itemPrice <= maxPrice;
-    });
-
-    // Filter by location (global context sync)
+    // Location filter (text match)
     if (selectedLocation !== 'All Locations') {
       result = result.filter(l => l.location === selectedLocation);
     }
 
-    // Filter by Brand/Model (Simple text search on title)
+    // Brand/Model text search
     if (brandSearch.trim()) {
       const query = brandSearch.toLowerCase();
       result = result.filter(l => l.title.toLowerCase().includes(query));
     }
 
-    // 5. B2B Specific Filters
+    // B2B Specific Filters
     if (activeCategory === 'b2b' || saleType === 'b2b') {
       if (b2bMaxMoq !== '') {
         result = result.filter(l => l.isB2B && l.b2bMoq && l.b2bMoq <= b2bMaxMoq);
@@ -238,25 +288,11 @@ const Listings = () => {
       }
     });
 
-    // Sort
-    switch (sortBy) {
-      case 'price-low':
-        result.sort((a, b) => a.price - b.price);
-        break;
-      case 'price-high':
-        result.sort((a, b) => b.price - a.price);
-        break;
-      case 'newest':
-      default:
-        result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }
-
     return result;
   }, [
-    activeCategory, condition, sortBy, priceRange, selectedLocation,
-    brandSearch, globalSearch, dynamicFilters,
+    backendAds, selectedLocation, brandSearch,
     saleType, postedWithin, verifiedOnly,
-    b2bMaxMoq, b2bInStock, b2bDelivery
+    b2bMaxMoq, b2bInStock, b2bDelivery, dynamicFilters, activeCategory
   ]);
 
   const handleCategoryChange = (slug: string) => {
