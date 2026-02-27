@@ -27,11 +27,16 @@ import Sitemap from './pages/Sitemap';
 
 const queryClient = new QueryClient();
 
-// Simple Protected Route Wrapper
+// Protected Route - validates both auth flag and JWT token
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  const hasToken = !!localStorage.getItem('token');
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !hasToken) {
+    // Clean up stale auth state
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('token');
+    localStorage.removeItem('isVerified');
     return <Navigate to="/login" replace />;
   }
 

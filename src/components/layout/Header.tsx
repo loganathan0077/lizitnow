@@ -15,7 +15,12 @@ import {
   MessageSquare,
   ShoppingBag,
   CreditCard,
-  BellRing
+  BellRing,
+  LogOut,
+  Heart,
+  Settings,
+  FileText,
+  ChevronDown
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useLocationContext } from '@/context/LocationContext';
@@ -24,6 +29,7 @@ import { LocationFilter } from '../shared/LocationFilter';
 import SearchSuggestions from '../shared/SearchSuggestions';
 import CategoryNav from './CategoryNav';
 import { MobileCategoryAccordion } from './MobileCategoryAccordion';
+import { toast } from 'sonner';
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -35,6 +41,17 @@ const Header = () => {
   const navigate = useNavigate();
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
   const isVerified = localStorage.getItem('isVerified') === 'true';
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('isVerified');
+    toast.success('Logged out successfully');
+    navigate('/');
+    // Force re-render
+    window.location.href = '/';
+  };
 
   interface Notification {
     id: string;
@@ -300,13 +317,50 @@ const Header = () => {
             {/* Desktop Auth */}
             <div className="hidden md:flex items-center gap-3 ml-1">
               {isAuthenticated ? (
-                <Link to="/dashboard">
+                <div className="relative" onMouseEnter={() => setIsAccountOpen(true)} onMouseLeave={() => setIsAccountOpen(false)}>
                   <Button variant="ghost" className="hidden lg:flex items-center gap-2 hover:bg-secondary">
                     <User className="h-4 w-4" />
                     <span className="font-medium">My Account</span>
                     {isVerified && <BadgeCheck className="h-4 w-4 text-trust-blue ml-1" />}
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isAccountOpen ? 'rotate-180' : ''}`} />
                   </Button>
-                </Link>
+
+                  {isAccountOpen && (
+                    <div className="absolute right-0 top-full mt-1 w-56 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                      <div className="p-1.5">
+                        <Link to="/dashboard" onClick={() => setIsAccountOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          Dashboard
+                        </Link>
+                        <Link to="/dashboard" onClick={() => setIsAccountOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          My Listings
+                        </Link>
+                        <Link to="/dashboard/wallet" onClick={() => setIsAccountOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors">
+                          <Wallet className="h-4 w-4 text-muted-foreground" />
+                          Wallet
+                        </Link>
+                        <Link to="/dashboard/wishlist" onClick={() => setIsAccountOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors">
+                          <Heart className="h-4 w-4 text-muted-foreground" />
+                          Wishlist
+                        </Link>
+                        <Link to="/dashboard/settings" onClick={() => setIsAccountOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors">
+                          <Settings className="h-4 w-4 text-muted-foreground" />
+                          Settings
+                        </Link>
+                      </div>
+                      <div className="border-t border-border p-1.5">
+                        <button
+                          onClick={handleLogout}
+                          className="flex items-center gap-3 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 rounded-lg transition-colors w-full text-left"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Logout
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <Link to="/login">
                   <Button variant="ghost" className="font-medium hover:bg-secondary group hidden sm:flex">
@@ -391,6 +445,13 @@ const Header = () => {
                     <span>My Dashboard</span>
                   </Link>
                 </Button>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-destructive hover:bg-destructive/10 transition-colors w-full text-left"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span className="font-semibold">Logout</span>
+                </button>
               </>
             )}
           </div>

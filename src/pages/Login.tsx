@@ -94,13 +94,6 @@ const Login = () => {
                   ? 'Login to your Liztitnow.com account'
                   : 'Join our trusted marketplace'}
               </p>
-              {mode === 'login' && (
-                <div className="mt-4 p-3 bg-blue-50 text-blue-700 rounded-md text-xs text-left border border-blue-100">
-                  <p className="font-semibold mb-1">Testing Credentials:</p>
-                  <p>Email: <strong>test@liztitnow.com</strong></p>
-                  <p>Password: <strong>password123</strong></p>
-                </div>
-              )}
             </div>
 
             {/* Method Tabs */}
