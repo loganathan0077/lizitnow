@@ -427,11 +427,22 @@ app.get('/api/ads/search', async (req, res) => {
             where,
             include: {
                 category: true,
-                subcategory: true,
-                user: { select: { id: true, name: true, isGstVerified: true, avatarUrl: true } }
+                subcategory: true
             },
             orderBy
         });
+
+        // Manually stitch user data since Ad lacks an explicit relation in Prisma schema
+        const userIds = [...new Set(ads.map(ad => ad.userId))];
+        const users = await prisma.user.findMany({
+            where: { id: { in: userIds } },
+            select: { id: true, name: true, isGstVerified: true, avatarUrl: true }
+        });
+
+        ads = ads.map(ad => ({
+            ...ad,
+            user: users.find(u => u.id === ad.userId) || null
+        }));
 
         // Apply Haversine distance filter if lat, lng, and radius provided
         const userLat = parseFloat(lat);
