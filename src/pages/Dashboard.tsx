@@ -373,21 +373,25 @@ const Dashboard = () => {
 
     try {
       setIsUploadingAvatar(true);
-      const base64Image = await processImage(file, true);
+
+      const formData = new FormData();
+      formData.append('avatar', file);
 
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE}/api/user/avatar`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ avatarUrl: base64Image })
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
       });
 
-      if (res.ok) {
-        setProfileForm(prev => ({ ...prev, avatarUrl: base64Image }));
-        setUser((prev: any) => ({ ...prev, avatarUrl: base64Image }));
+      const data = await res.json();
+
+      if (res.ok && data.avatarUrl) {
+        setProfileForm(prev => ({ ...prev, avatarUrl: data.avatarUrl }));
+        setUser((prev: any) => ({ ...prev, avatarUrl: data.avatarUrl }));
         toast.success('Avatar updated successfully');
       } else {
-        toast.error('Failed to update avatar');
+        toast.error(data.error || 'Failed to update avatar');
       }
     } catch (err) {
       console.error(err);
@@ -408,21 +412,25 @@ const Dashboard = () => {
 
     try {
       setIsUploadingBanner(true);
-      const base64Image = await processImage(file, false);
+
+      const formData = new FormData();
+      formData.append('banner', file);
 
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE}/api/user/banner`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ bannerImage: base64Image })
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
       });
 
-      if (res.ok) {
-        setProfileForm(prev => ({ ...prev, bannerImage: base64Image }));
-        setUser((prev: any) => ({ ...prev, bannerImage: base64Image }));
-        toast.success('Cover image updated successfully');
+      const data = await res.json();
+
+      if (res.ok && data.bannerImage) {
+        setProfileForm(prev => ({ ...prev, bannerImage: data.bannerImage }));
+        setUser((prev: any) => ({ ...prev, bannerImage: data.bannerImage }));
+        toast.success('Banner updated successfully');
       } else {
-        toast.error('Failed to update cover image');
+        toast.error(data.error || 'Failed to update banner');
       }
     } catch (err) {
       console.error(err);

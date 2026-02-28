@@ -4,6 +4,8 @@ const { PrismaClient } = require('@prisma/client');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
+const cloudinary = require('cloudinary').v2;
+const multer = require('multer');
 require('dotenv').config();
 const { generateInvoicePDF } = require('./utils/invoiceGenerator');
 
@@ -24,6 +26,46 @@ const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_SKnTW4vdIbLtKk',
     key_secret: process.env.RAZORPAY_KEY_SECRET || 'jZmMEEfXwRbXTtRg5UGWvKvZ',
 });
+
+// Cloudinary configuration
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Configure Multer for memory storage
+const storage = multer.memoryStorage();
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type. Only JPG, PNG, JPEG, and WEBP are allowed.'));
+        }
+    }
+});
+
+// Helper: Upload Buffer to Cloudinary
+const uploadToCloudinary = (buffer) => {
+    return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: 'ads' },
+            (error, result) => {
+                if (error) reject(error);
+                else resolve(result.secure_url);
+            }
+        );
+        const { Readable } = require('stream');
+        const stream = new Readable();
+        stream.push(buffer);
+        stream.push(null);
+        stream.pipe(uploadStream);
+    });
+};
 
 // Middleware: Authenticate User
 const authenticate = (req, res, next) => {
@@ -296,8 +338,14 @@ app.get('/api/ads/search', async (req, res) => {
 
         if (minPrice || maxPrice) {
             where.price = {};
-            if (minPrice) where.price.gte = parseFloat(minPrice);
-            if (maxPrice) where.price.lte = parseFloat(maxPrice);
+            if (minPrice && !isNaN(parseFloat(minPrice))) {
+                where.price.gte = parseFloat(minPrice);
+            }
+            if (maxPrice && !isNaN(parseFloat(maxPrice))) {
+                where.price.lte = parseFloat(maxPrice);
+            }
+            // Clean up if both were invalid
+            if (Object.keys(where.price).length === 0) delete where.price;
         }
 
         let orderBy = { createdAt: 'desc' };
@@ -315,11 +363,11 @@ app.get('/api/ads/search', async (req, res) => {
         });
 
         // Apply Haversine distance filter if lat, lng, and radius provided
-        if (lat && lng && radius) {
-            const userLat = parseFloat(lat);
-            const userLng = parseFloat(lng);
-            const maxDist = parseFloat(radius);
+        const userLat = parseFloat(lat);
+        const userLng = parseFloat(lng);
+        const maxDist = parseFloat(radius);
 
+        if (!isNaN(userLat) && !isNaN(userLng) && !isNaN(maxDist)) {
             const toRad = (deg) => deg * (Math.PI / 180);
 
             ads = ads
@@ -341,7 +389,8 @@ app.get('/api/ads/search', async (req, res) => {
         res.json({ ads });
     } catch (error) {
         console.error('[ads/search] Error:', error);
-        res.status(500).json({ error: 'Search failed' });
+        console.error('Query params:', req.query);
+        res.status(500).json({ error: 'Search failed', details: error.message });
     }
 });
 
@@ -364,17 +413,18 @@ app.get('/api/user/ads', authenticate, async (req, res) => {
 });
 
 // Update User Banner
-app.post('/api/user/banner', authenticate, async (req, res) => {
+app.post('/api/user/banner', authenticate, upload.single('banner'), async (req, res) => {
     try {
-        const { bannerImage } = req.body;
-        if (!bannerImage) return res.status(400).json({ error: 'Banner image required' });
+        if (!req.file) return res.status(400).json({ error: 'Banner image required' });
+
+        const bannerUrl = await uploadToCloudinary(req.file.buffer);
 
         await prisma.user.update({
             where: { id: req.user.userId },
-            data: { bannerImage }
+            data: { bannerImage: bannerUrl }
         });
 
-        res.json({ message: 'Banner updated successfully' });
+        res.json({ message: 'Banner updated successfully', bannerImage: bannerUrl });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to update banner' });
@@ -382,17 +432,18 @@ app.post('/api/user/banner', authenticate, async (req, res) => {
 });
 
 // Update User Avatar
-app.post('/api/user/avatar', authenticate, async (req, res) => {
+app.post('/api/user/avatar', authenticate, upload.single('avatar'), async (req, res) => {
     try {
-        const { avatarUrl } = req.body;
-        if (!avatarUrl) return res.status(400).json({ error: 'Avatar image required' });
+        if (!req.file) return res.status(400).json({ error: 'Avatar image required' });
+
+        const avatarUrl = await uploadToCloudinary(req.file.buffer);
 
         await prisma.user.update({
             where: { id: req.user.userId },
             data: { avatarUrl }
         });
 
-        res.json({ message: 'Avatar updated successfully' });
+        res.json({ message: 'Avatar updated successfully', avatarUrl });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to update avatar' });
@@ -461,7 +512,7 @@ app.get('/api/ads/:id', async (req, res) => {
 });
 
 // Post Ad
-app.post('/api/ads/post', authenticate, async (req, res) => {
+app.post('/api/ads/post', authenticate, upload.array('images', 5), async (req, res) => {
     try {
         const user = await prisma.user.findUnique({
             where: { id: req.user.userId }
@@ -471,10 +522,18 @@ app.post('/api/ads/post', authenticate, async (req, res) => {
 
         const {
             title, description, price, categoryId, subcategoryId,
-            condition, location, images, dynamicData, includedItems, videoUrl, mapUrl,
+            condition, location, dynamicData, includedItems, videoUrl, mapUrl,
             isB2B, b2bMoq, b2bPricePerUnit, b2bStock, b2bBusinessName, b2bGstNumber, b2bDelivery,
             latitude, longitude
         } = req.body;
+
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ error: 'At least one image is required' });
+        }
+
+        // Upload images to Cloudinary
+        const uploadPromises = req.files.map(file => uploadToCloudinary(file.buffer));
+        const imageUrls = await Promise.all(uploadPromises);
 
         const category = await prisma.category.findUnique({
             where: { id: categoryId },
@@ -551,9 +610,9 @@ app.post('/api/ads/post', authenticate, async (req, res) => {
                     userId: user.id,
                     condition,
                     location,
-                    images: JSON.stringify(images || []),
-                    dynamicData: dynamicData ? JSON.stringify(dynamicData) : null,
-                    includedItems: includedItems ? JSON.stringify(includedItems) : null,
+                    images: JSON.stringify(imageUrls),
+                    dynamicData: dynamicData ? (typeof dynamicData === 'string' ? dynamicData : JSON.stringify(dynamicData)) : null,
+                    includedItems: includedItems ? (typeof includedItems === 'string' ? includedItems : JSON.stringify(includedItems)) : null,
                     videoUrl,
                     mapUrl,
                     isB2B: !!isB2B,

@@ -1,10 +1,10 @@
 import API_BASE from '@/lib/api';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, BadgeCheck, Loader2, Coins, Calendar, Image as ImageIcon, Youtube, MapPin, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { ShieldAlert, BadgeCheck, Loader2, Coins, Calendar, Image as ImageIcon, Youtube, MapPin, ArrowLeft, CheckCircle2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Listing } from '@/types/marketplace';
 
@@ -132,6 +132,11 @@ const PostAd = () => {
         b2bDelivery: false
     });
 
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [previews, setPreviews] = useState<string[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+
     const [dynamicFields, setDynamicFields] = useState<Record<string, string | number>>({});
     const [includedItems, setIncludedItems] = useState('');
 
@@ -143,6 +148,48 @@ const PostAd = () => {
     useEffect(() => {
         setDynamicFields({});
     }, [formData.subcategoryId]);
+
+    // Cleanup previews on unmount
+    useEffect(() => {
+        return () => {
+            previews.forEach(url => URL.revokeObjectURL(url));
+        };
+    }, [previews]);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            const files = Array.from(e.target.files);
+            const validFiles: File[] = [];
+            const newPreviews: string[] = [];
+
+            if (selectedFiles.length + files.length > 5) {
+                toast.error("Maximum 5 images allowed");
+                return;
+            }
+
+            files.forEach(file => {
+                if (file.size > 5 * 1024 * 1024) {
+                    toast.error(`${file.name} is too large (max 5MB)`);
+                    return;
+                }
+                if (!['image/jpeg', 'image/png', 'image/jpg', 'image/webp'].includes(file.type)) {
+                    toast.error(`${file.name} has invalid type`);
+                    return;
+                }
+                validFiles.push(file);
+                newPreviews.push(URL.createObjectURL(file));
+            });
+
+            setSelectedFiles(prev => [...prev, ...validFiles]);
+            setPreviews(prev => [...prev, ...newPreviews]);
+        }
+    };
+
+    const removeFile = (index: number) => {
+        URL.revokeObjectURL(previews[index]);
+        setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+        setPreviews(prev => prev.filter((_, i) => i !== index));
+    };
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -215,6 +262,11 @@ const PostAd = () => {
             return;
         }
 
+        if (selectedFiles.length === 0) {
+            toast.error("Images Required", { description: "Please upload at least one image." });
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
@@ -231,23 +283,37 @@ const PostAd = () => {
                 // Geolocation denied or unavailable — continue without coordinates
             }
 
-            const payload = {
-                ...formData,
-                price: formData.isB2B ? 0 : Number(formData.price),
-                images: ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop'], // Hardcoded for now
-                dynamicData: Object.keys(dynamicFields).length > 0 ? dynamicFields : undefined,
-                includedItems: includedItems.trim() ? includedItems.split(',').map(i => i.trim()) : undefined,
-                videoUrl: formData.videoUrl || undefined,
-                mapUrl: formData.mapUrl || undefined,
-                latitude,
-                longitude
-            };
+            const formDataToSend = new FormData();
+
+            // Append basic fields
+            Object.entries(formData).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    formDataToSend.append(key, value.toString());
+                }
+            });
+
+            // Append images
+            selectedFiles.forEach(file => {
+                formDataToSend.append('images', file);
+            });
+
+            // Append dynamic data and included items as strings
+            if (Object.keys(dynamicFields).length > 0) {
+                formDataToSend.append('dynamicData', JSON.stringify(dynamicFields));
+            }
+            if (includedItems.trim()) {
+                formDataToSend.append('includedItems', JSON.stringify(includedItems.split(',').map(i => i.trim())));
+            }
+
+            // Append coordinates
+            if (latitude) formDataToSend.append('latitude', latitude.toString());
+            if (longitude) formDataToSend.append('longitude', longitude.toString());
 
             const token = localStorage.getItem('token');
             const res = await fetch(`${API_BASE}/api/ads/post`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify(payload)
+                headers: { Authorization: `Bearer ${token}` },
+                body: formDataToSend
             });
 
             if (!res.ok) {
@@ -414,6 +480,10 @@ const PostAd = () => {
                                     <form onSubmit={handleSubmit} className="space-y-6">
                                         {currentStep === 3 && (
                                             <>
+                                                <div className="mb-4 flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full w-fit">
+                                                    <BadgeCheck className="h-3 w-3 text-emerald-600" />
+                                                    <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-tighter">Real Production Uploader Active</span>
+                                                </div>
                                                 {/* Minimal Category Header summary instead of selects */}
                                                 <div className="bg-secondary/40 p-4 rounded-xl mb-6 border border-border flex items-center justify-between">
                                                     <div>
@@ -679,14 +749,44 @@ const PostAd = () => {
                                             />
                                         </div>
 
-                                        {/* Mock Image Upload */}
+                                        {/* Real Image Upload */}
                                         <div>
-                                            <label className="block text-sm font-medium text-foreground mb-2">Photos</label>
-                                            <div className="border-2 border-dashed border-border rounded-xl p-8 text-center bg-secondary/30">
-                                                <ImageIcon className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                                                <p className="text-sm text-muted-foreground">Image upload is simulated.</p>
-                                                <p className="text-xs text-muted-foreground mt-1">A default image will be used.</p>
+                                            <label className="block text-sm font-medium text-foreground mb-4">Photos (Max 5)</label>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
+                                                {previews.map((preview, index) => (
+                                                    <div key={preview} className="relative aspect-square rounded-xl overflow-hidden border border-border group">
+                                                        <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeFile(index)}
+                                                            className="absolute top-2 right-2 p-1.5 bg-destructive/90 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                {selectedFiles.length < 5 && (
+                                                    <div
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        className="border-2 border-dashed border-border rounded-xl aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-secondary/50 hover:border-primary/50 transition-all focus-within:ring-2 focus-within:ring-primary/20"
+                                                    >
+                                                        <input
+                                                            ref={fileInputRef}
+                                                            id="file-upload"
+                                                            type="file"
+                                                            multiple
+                                                            accept="image/*"
+                                                            onChange={handleFileChange}
+                                                            className="sr-only"
+                                                        />
+                                                        <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />
+                                                        <span className="text-xs font-medium text-muted-foreground">Add Photo</span>
+                                                    </div>
+                                                )}
                                             </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                Max 5MB per image. Allowed: JPG, PNG, WEBP.
+                                            </p>
                                         </div>
 
                                         <div className="pt-4 border-t border-border">
