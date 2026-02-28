@@ -127,7 +127,7 @@ app.get('/health/ads', async (req, res) => {
         const ads = await prisma.ad.findMany({
             take: 5,
             orderBy: { createdAt: 'desc' },
-            include: { category: true, user: { select: { name: true, email: true } } }
+            include: { category: true }
         });
         res.json({ status: 'OK', ads });
     } catch (error) {
