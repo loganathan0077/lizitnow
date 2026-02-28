@@ -99,6 +99,28 @@ app.get('/health', async (req, res) => {
     }
 });
 
+// Cloudinary Test Route
+app.get('/health/cloudinary', async (req, res) => {
+    try {
+        // 1x1 transparent GIF buffer
+        const buffer = Buffer.from('R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==', 'base64');
+        const url = await uploadToCloudinary(buffer);
+        res.json({
+            status: 'OK',
+            message: 'Cloudinary upload succeeded',
+            url: url
+        });
+    } catch (error) {
+        console.error('Cloudinary Test Failed:', error);
+        res.status(500).json({
+            status: 'ERROR',
+            message: 'Cloudinary upload failed',
+            error: error.message,
+            stack: error.stack
+        });
+    }
+});
+
 // Middleware: Authenticate User
 const authenticate = (req, res, next) => {
     let token = null;
