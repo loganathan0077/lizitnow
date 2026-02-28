@@ -281,7 +281,10 @@ app.put('/api/auth/profile', authenticate, async (req, res) => {
         res.json({ message: 'Profile updated successfully', user: updatedUser });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({
+            error: error.message,
+            stack: error.stack
+        });
     }
 });
 
@@ -708,10 +711,14 @@ app.post('/api/ads/post', authenticate, upload.array('images', 5), async (req, r
             });
         });
 
-        res.json({ message: 'Ad posted successfully!', ad: newAd, adsPosted: user.adsPosted + 1 });
+        res.json({ message: 'Ad posted successfully', adId: newAd.id });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error('CRITICAL POST AD ERROR:', error);
+        res.status(500).json({
+            error: 'Internal server error',
+            details: error.message,
+            stack: error.stack
+        });
     }
 });
 
