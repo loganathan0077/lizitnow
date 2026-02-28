@@ -578,8 +578,10 @@ app.post('/api/ads/post', authenticate, upload.array('images', 5), async (req, r
         const subcategory = await prisma.subcategory.findUnique({ where: { id: subcategoryId } });
         if (!subcategory) return res.status(400).json({ error: 'Invalid subcategory' });
 
+        const isB2B_bool = isB2B === 'true';
+
         // Basic B2B Validation
-        if (isB2B) {
+        if (isB2B_bool) {
             if (!b2bMoq || isNaN(parseInt(b2bMoq))) return res.status(400).json({ error: 'Minimum Order Quantity (MOQ) is required for B2B' });
             if (!b2bPricePerUnit || isNaN(parseFloat(b2bPricePerUnit))) return res.status(400).json({ error: 'Price Per Unit is required for B2B' });
         }
@@ -615,20 +617,20 @@ app.post('/api/ads/post', authenticate, upload.array('images', 5), async (req, r
                     includedItems: includedItems ? (typeof includedItems === 'string' ? includedItems : JSON.stringify(includedItems)) : null,
                     videoUrl,
                     mapUrl,
-                    isB2B: !!isB2B,
-                    b2bMoq: isB2B ? parseInt(b2bMoq) : null,
-                    b2bPricePerUnit: isB2B ? parseFloat(b2bPricePerUnit) : null,
-                    b2bStock: isB2B && b2bStock ? parseInt(b2bStock) : null,
-                    b2bBusinessName: isB2B ? b2bBusinessName : null,
-                    b2bGstNumber: isB2B ? b2bGstNumber : null,
-                    b2bDelivery: isB2B ? !!b2bDelivery : null,
+                    isB2B: isB2B_bool,
+                    b2bMoq: isB2B_bool ? (parseInt(b2bMoq) || null) : null,
+                    b2bPricePerUnit: isB2B_bool ? (parseFloat(b2bPricePerUnit) || null) : null,
+                    b2bStock: (isB2B_bool && b2bStock) ? (parseInt(b2bStock) || null) : null,
+                    b2bBusinessName: isB2B_bool ? b2bBusinessName : null,
+                    b2bGstNumber: isB2B_bool ? b2bGstNumber : null,
+                    b2bDelivery: isB2B_bool ? (b2bDelivery === 'true') : null,
                     expiresAt,
                     status: adStatus,
                     validityDays,
                     pricePaid: priceToDeduct,
                     adPlanType,
-                    latitude: latitude ? parseFloat(latitude) : null,
-                    longitude: longitude ? parseFloat(longitude) : null
+                    latitude: (latitude && !isNaN(parseFloat(latitude))) ? parseFloat(latitude) : null,
+                    longitude: (longitude && !isNaN(parseFloat(longitude))) ? parseFloat(longitude) : null
                 }
             });
 
