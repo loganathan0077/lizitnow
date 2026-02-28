@@ -121,6 +121,20 @@ app.get('/health/cloudinary', async (req, res) => {
     }
 });
 
+// Diagnostic Route: Raw Ads Check
+app.get('/health/ads', async (req, res) => {
+    try {
+        const ads = await prisma.ad.findMany({
+            take: 5,
+            orderBy: { createdAt: 'desc' },
+            include: { category: true, user: { select: { name: true, email: true } } }
+        });
+        res.json({ status: 'OK', ads });
+    } catch (error) {
+        res.status(500).json({ status: 'ERROR', error: error.message });
+    }
+});
+
 // Middleware: Authenticate User
 const authenticate = (req, res, next) => {
     let token = null;
