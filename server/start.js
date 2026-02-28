@@ -16,12 +16,12 @@ function run(cmd, label) {
     }
 }
 
-// Step 1: Run database migrations
-run('npx prisma migrate deploy', 'Prisma migrate deploy');
+// 1. Force Sync Prisma Schema to Database
+run('npx prisma db push --accept-data-loss', 'Prisma DB Push');
 
-// Step 2: Seed categories (idempotent — uses upsert)
-run('node seed.js', 'Database seed');
+// 2. Run Prisma Seed (if any mock data needed)
+run('node seed.js', 'Database Seed');
 
-// Step 3: Start Express server
-console.log('[deploy] Starting server...');
+// 3. Start the actual server
+console.log('[deploy] Starting Node server...');
 require('./index.js');
