@@ -67,6 +67,38 @@ const uploadToCloudinary = (buffer) => {
     });
 };
 
+// Health Check Route
+app.get('/health', async (req, res) => {
+    try {
+        const userCount = await prisma.user.count();
+        const categoryCount = await prisma.category.count();
+        const adCount = await prisma.ad.count();
+        res.json({
+            status: 'OK',
+            database: 'Connected',
+            counts: { users: userCount, categories: categoryCount, ads: adCount },
+            cloudinary: {
+                cloud_name: process.env.CLOUDINARY_CLOUD_NAME ? 'SET' : 'MISSING',
+                api_key: process.env.CLOUDINARY_API_KEY ? 'SET' : 'MISSING',
+                api_secret: process.env.CLOUDINARY_API_SECRET ? 'SET' : 'MISSING',
+            },
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'ERROR',
+            database: 'Disconnected',
+            error: error.message,
+            cloudinary: {
+                cloud_name: process.env.CLOUDINARY_CLOUD_NAME ? 'SET' : 'MISSING',
+                api_key: process.env.CLOUDINARY_API_KEY ? 'SET' : 'MISSING',
+                api_secret: process.env.CLOUDINARY_API_SECRET ? 'SET' : 'MISSING',
+            },
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
 // Middleware: Authenticate User
 const authenticate = (req, res, next) => {
     let token = null;
