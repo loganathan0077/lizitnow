@@ -362,8 +362,8 @@ const ListingDetail = () => {
                     )}
                   </div>
 
-                  {/* Mobile Only Price (Native below title) */}
-                  <div className="lg:hidden mb-5">
+                  {/* Listing Price (Native below title) */}
+                  <div className="mb-5">
                     <div className="text-3xl font-display font-bold text-foreground">
                       {listing.isB2B ? formatPrice(listing.b2bPricePerUnit || 0) : formatPrice(listing.price)}
                     </div>
@@ -525,21 +525,8 @@ const ListingDetail = () => {
 
             {/* Right Column - Price & Seller */}
             <div className="space-y-6" >
-              {/* Price Card */}
+              {/* Seller Information Card */}
               <div className="card-premium p-6 sticky top-24" >
-                <div className="text-3xl font-display font-bold text-foreground mb-1">
-                  {listing.isB2B ? formatPrice(listing.b2bPricePerUnit || 0) : formatPrice(listing.price)}
-                </div>
-                {
-                  listing.isB2B ? (
-                    <div className="text-sm font-medium text-muted-foreground mb-6">
-                      Price Per Unit • Minimum Order: <span className="text-foreground">{listing.b2bMoq} Units</span>
-                    </div>
-                  ) : (
-                    <div className="mb-6"></div>
-                  )
-                }
-
                 {/* Action Buttons */}
                 <div className="hidden lg:flex items-center gap-3 mb-6">
                   <Button
