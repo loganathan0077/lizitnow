@@ -761,10 +761,12 @@ const PostAd = () => {
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                         {fields.map((field: any) => (
                                                             <div key={field.name}>
-                                                                <label className="block text-sm font-medium text-foreground mb-2">{field.name}</label>
+                                                                <label className="block text-sm font-medium text-foreground mb-2">
+                                                                    {field.name} {field.optional && <span className="text-muted-foreground font-normal">(Optional)</span>}
+                                                                </label>
                                                                 {field.type === 'select' ? (
                                                                     <select
-                                                                        required
+                                                                        required={!field.optional}
                                                                         value={dynamicFields[field.name] || ''}
                                                                         onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
                                                                         className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
@@ -777,10 +779,10 @@ const PostAd = () => {
                                                                 ) : (
                                                                     <input
                                                                         type={field.type}
-                                                                        required
+                                                                        required={!field.optional}
                                                                         value={dynamicFields[field.name] || ''}
                                                                         onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                                                                        placeholder={field.placeholder}
+                                                                        placeholder={field.placeholder || ''}
                                                                         className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                                                                     />
                                                                 )}

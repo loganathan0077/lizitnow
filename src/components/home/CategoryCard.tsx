@@ -23,6 +23,7 @@ const CATEGORY_IMAGES: Record<string, string> = {
   'sports-fitness': 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=800&auto=format&fit=crop',
   'fashion-lifestyle': 'https://images.unsplash.com/photo-1445205170230-053b83016050?q=80&w=800&auto=format&fit=crop',
   'b2b': 'https://images.unsplash.com/photo-1587293852726-70cdb56c2866?q=80&w=800&auto=format&fit=crop',
+  'general-merchandise': 'https://images.unsplash.com/photo-1605371924599-2d0365da1ae0?q=80&w=800&auto=format&fit=crop',
 };
 
 const SUBCATEGORY_IMAGES: Record<string, string> = {
@@ -76,6 +77,15 @@ const SUBCATEGORY_IMAGES: Record<string, string> = {
   'jobs-education': 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?q=80&w=800&auto=format&fit=crop',
   'jobs-construction': 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?q=80&w=800&auto=format&fit=crop',
   'jobs-wfh': 'https://images.unsplash.com/photo-1593642532400-2682810df593?q=80&w=800&auto=format&fit=crop',
+  // General Merchandise
+  'general-toys-games': 'https://images.unsplash.com/photo-1558066559-0a56f6c91e2b?q=80&w=800&auto=format&fit=crop',
+  'general-stationery': 'https://images.unsplash.com/photo-1506784983877-45594efa4cbe?q=80&w=800&auto=format&fit=crop',
+  'general-gift-items': 'https://images.unsplash.com/photo-1512909006721-3d6018887383?q=80&w=800&auto=format&fit=crop',
+  'general-household': 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=800&auto=format&fit=crop',
+  'general-baby-products': 'https://images.unsplash.com/photo-1519689680058-324335c77eba?q=80&w=800&auto=format&fit=crop',
+  'general-plastic-items': 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=800&auto=format&fit=crop',
+  'general-fancy-store': 'https://images.unsplash.com/photo-1605371924599-2d0365da1ae0?q=80&w=800&auto=format&fit=crop',
+  'general-others': 'https://images.unsplash.com/photo-1556761175-5973b0ceafcf?q=80&w=800&auto=format&fit=crop',
 };
 
 const DEFAULT_CATEGORY_IMG = 'https://images.unsplash.com/photo-1556761175-5973b0ceafcf?q=80&w=800&auto=format&fit=crop';

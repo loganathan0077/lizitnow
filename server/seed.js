@@ -329,6 +329,48 @@ async function main() {
         });
     }
 
+    // 14. General Merchandise
+    const generalMerchandise = await prisma.category.upsert({
+        where: { slug: 'general-merchandise' },
+        update: {},
+        create: { name: '🛒 General Merchandise', slug: 'general-merchandise' }
+    });
+
+    const generalFields = JSON.stringify([
+        { name: 'Brand', type: 'text', placeholder: 'e.g. Local Brand, Unbranded', optional: true },
+        { name: 'Condition', type: 'select', options: ['New', 'Like New', 'Used'], optional: true },
+        { name: 'Material', type: 'text', placeholder: 'e.g. Plastic, Wood, Fabric', optional: true },
+        { name: 'Suitable For', type: 'text', placeholder: 'e.g. Kids, Adults, All Ages', optional: true },
+        { name: 'Pack Size / Quantity', type: 'text', placeholder: 'e.g. 100 Pieces, Pack of 6', optional: true },
+        { name: 'Weight', type: 'text', placeholder: 'e.g. 500g, 1kg', optional: true },
+        { name: 'Length', type: 'number', placeholder: 'Length', optional: true },
+        { name: 'Width', type: 'number', placeholder: 'Width', optional: true },
+        { name: 'Height', type: 'number', placeholder: 'Height', optional: true },
+        { name: 'Unit', type: 'select', options: ['cm', 'inch'], optional: true },
+        { name: 'Color', type: 'text', placeholder: 'e.g. Red, Blue, Mixed', optional: true },
+        { name: 'Warranty', type: 'select', options: ['No Warranty', '7 Days', '1 Month', '6 Months', 'Other'], optional: true },
+        { name: 'Custom Category (If Others)', type: 'text', placeholder: 'Specify if Others', optional: true }
+    ]);
+
+    const generalMerchandiseSubcats = [
+        { name: 'Toys & Games', slug: 'general-toys-games', formFields: generalFields },
+        { name: 'Stationery', slug: 'general-stationery', formFields: generalFields },
+        { name: 'Gift Items', slug: 'general-gift-items', formFields: generalFields },
+        { name: 'Household Items', slug: 'general-household', formFields: generalFields },
+        { name: 'Baby Products', slug: 'general-baby-products', formFields: generalFields },
+        { name: 'Plastic Items', slug: 'general-plastic-items', formFields: generalFields },
+        { name: 'Fancy Store Items', slug: 'general-fancy-store', formFields: generalFields },
+        { name: 'Others', slug: 'general-others', formFields: generalFields }
+    ];
+
+    for (const sub of generalMerchandiseSubcats) {
+        await prisma.subcategory.upsert({
+            where: { slug: sub.slug },
+            update: {},
+            create: { ...sub, categoryId: generalMerchandise.id }
+        });
+    }
+
     console.log('Seeding completed successfully!');
 }
 

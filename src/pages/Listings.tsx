@@ -26,7 +26,8 @@ import {
   Dog,
   PartyPopper,
   Factory,
-  Locate
+  Locate,
+  ShoppingBag
 } from 'lucide-react';
 import { formatPrice } from '@/lib/formatPrice';
 import { locations } from '@/data/mockData';
@@ -49,6 +50,10 @@ const iconMap: Record<string, any> = {
   Dog,
   PartyPopper,
   Factory
+};
+
+const slugIconMap: Record<string, any> = {
+  'general-merchandise': ShoppingBag
 };
 
 const conditionOptions = [
@@ -390,7 +395,7 @@ const Listings = () => {
                 B2B / Wholesale
               </button>
               {categoriesList.map((cat) => {
-                const Icon = iconMap[cat.icon] || MapPin;
+                const Icon = iconMap[cat.icon] || slugIconMap[cat.slug] || MapPin;
                 return (
                   <button
                     key={cat.id || cat.slug}
