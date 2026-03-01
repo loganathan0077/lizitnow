@@ -281,7 +281,7 @@ const ListingDetail = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
 
-      <main className="flex-1">
+      <main className="flex-1 bg-secondary/30 pb-24 lg:pb-0">
         {/* Breadcrumb */}
         <div className="bg-secondary/50 border-b border-border py-4">
           <div className="container-tight">
@@ -349,181 +349,196 @@ const ListingDetail = () => {
                     ))}
                   </div>
                 )}
-              </div>
+                {/* Product Details Combined Card Content */}
+                <div className="p-4 sm:p-6 border-t md:border-t-0 border-border">
+                  <div className="flex flex-wrap items-center gap-3 mb-3">
+                    <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
+                      {listing.title}
+                    </h1>
+                    {listing.isB2B && (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider shadow-sm">
+                        B2B / Wholesale
+                      </span>
+                    )}
+                  </div>
 
-              {/* Product Details */}
-              <div className="card-premium p-6">
-                <div className="flex flex-wrap items-center gap-3 mb-4">
-                  <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
-                    {listing.title}
-                  </h1>
-                  {listing.isB2B && (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider shadow-sm mt-1 mb-1">
-                      B2B / Wholesale
-                    </span>
-                  )}
-                </div>
+                  {/* Mobile Only Price (Native below title) */}
+                  <div className="lg:hidden mb-5">
+                    <div className="text-3xl font-display font-bold text-foreground">
+                      {listing.isB2B ? formatPrice(listing.b2bPricePerUnit || 0) : formatPrice(listing.price)}
+                    </div>
+                    {listing.isB2B && (
+                      <div className="text-sm font-medium text-muted-foreground mt-1">
+                        Min. Order: <span className="text-foreground">{listing.b2bMoq} Units</span>
+                      </div>
+                    )}
+                  </div>
 
-                {/* Quick Info Badges */}
-                <div className="flex flex-wrap items-center gap-2 mb-6">
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-sm font-medium text-foreground">
-                    <MapPin className="h-4 w-4 text-muted-foreground" /> {listing.location}
-                  </span>
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-sm font-medium text-foreground">
-                    <Clock className="h-4 w-4 text-muted-foreground" /> Posted {timeAgo(listing.createdAt)}
-                  </span>
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-sm font-medium text-foreground capitalize">
-                    {conditionLabels[listing.condition] || listing.condition} Condition
-                  </span>
-                  {listing.views > 0 && (
+                  {/* Quick Info Badges */}
+                  <div className="flex flex-wrap items-center gap-2 mb-6">
                     <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-sm font-medium text-foreground">
-                      <Eye className="h-4 w-4 text-muted-foreground" /> {listing.views} Views
+                      <MapPin className="h-4 w-4 text-muted-foreground" /> {listing.location}
                     </span>
-                  )}
-                  {listing.dynamicFields?.['Warranty'] && (
-                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-trust-green/10 text-trust-green text-sm font-bold">
-                      <ShieldCheck className="h-4 w-4" /> Warranty Included
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-sm font-medium text-foreground">
+                      <Clock className="h-4 w-4 text-muted-foreground" /> Posted {timeAgo(listing.createdAt)}
                     </span>
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-sm font-medium text-foreground capitalize">
+                      {conditionLabels[listing.condition] || listing.condition} Condition
+                    </span>
+                    {listing.views > 0 && (
+                      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-sm font-medium text-foreground">
+                        <Eye className="h-4 w-4 text-muted-foreground" /> {listing.views} Views
+                      </span>
+                    )}
+                    {listing.dynamicFields?.['Warranty'] && (
+                      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-trust-green/10 text-trust-green text-sm font-bold">
+                        <ShieldCheck className="h-4 w-4" /> Warranty Included
+                      </span>
+                    )}
+                  </div>
+
+                  {renderSmartPrice()}
+
+                  {/* What You Get Section */}
+                  {listing.includedItems && listing.includedItems.length > 0 && (
+                    <div className="mb-6 p-5 rounded-xl bg-secondary/50 border border-border">
+                      <h3 className="font-semibold text-foreground mb-3">Included Extras</h3>
+                      <ul className="grid sm:grid-cols-2 gap-3">
+                        {listing.includedItems.map((item: string, idx: number) => (
+                          <li key={idx} className="flex items-center gap-2 text-muted-foreground text-sm font-medium">
+                            <Check className="h-4 w-4 text-trust-green shrink-0" />
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
-                </div>
 
-                {renderSmartPrice()}
-
-                {/* What You Get Section */}
-                {listing.includedItems && listing.includedItems.length > 0 && (
-                  <div className="mb-6 p-5 rounded-xl bg-secondary/50 border border-border">
-                    <h3 className="font-semibold text-foreground mb-3">Included Extras</h3>
-                    <ul className="grid sm:grid-cols-2 gap-3">
-                      {listing.includedItems.map((item: string, idx: number) => (
-                        <li key={idx} className="flex items-center gap-2 text-muted-foreground text-sm font-medium">
-                          <Check className="h-4 w-4 text-trust-green shrink-0" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* B2B Wholesale Details Section */}
-                {listing.isB2B && (
-                  <div className="mb-8 p-5 border border-primary/20 bg-primary/5 rounded-xl">
-                    <h3 className="font-display font-semibold text-lg text-primary mb-4 flex items-center gap-2">
-                      📦 Wholesale Deal Information
-                    </h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                      <div className="bg-background p-3 rounded-lg border border-border">
-                        <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Min. Order (MOQ)</div>
-                        <div className="font-bold text-sm text-foreground">{listing.b2bMoq} Units</div>
+                  {/* B2B Wholesale Details Section */}
+                  {listing.isB2B && (
+                    <div className="mb-8 p-5 border border-primary/20 bg-primary/5 rounded-xl">
+                      <h3 className="font-display font-semibold text-lg text-primary mb-4 flex items-center gap-2">
+                        📦 Wholesale Deal Information
+                      </h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <div className="bg-background p-3 rounded-lg border border-border">
+                          <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Min. Order (MOQ)</div>
+                          <div className="font-bold text-sm text-foreground">{listing.b2bMoq} Units</div>
+                        </div>
+                        <div className="bg-background p-3 rounded-lg border border-border">
+                          <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Price Per Unit</div>
+                          <div className="font-bold text-sm text-foreground">{formatPrice(listing.b2bPricePerUnit || 0)}</div>
+                        </div>
+                        {listing.b2bStock ? (
+                          <div className="bg-background p-3 rounded-lg border border-border">
+                            <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Available Stock</div>
+                            <div className="font-bold text-sm text-foreground">{listing.b2bStock} Units</div>
+                          </div>
+                        ) : null}
+                        {listing.b2bBusinessName ? (
+                          <div className="bg-background p-3 rounded-lg border border-border">
+                            <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Business Name</div>
+                            <div className="font-bold text-sm text-foreground truncate">{listing.b2bBusinessName}</div>
+                          </div>
+                        ) : null}
+                        {listing.b2bGstNumber ? (
+                          <div className="bg-background p-3 rounded-lg border border-border">
+                            <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">GST Number</div>
+                            <div className="font-bold text-sm text-foreground">{listing.b2bGstNumber}</div>
+                          </div>
+                        ) : null}
+                        {listing.b2bDelivery !== null && listing.b2bDelivery !== undefined ? (
+                          <div className="bg-background p-3 rounded-lg border border-border">
+                            <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Delivery</div>
+                            <div className="font-bold text-sm text-foreground">{listing.b2bDelivery ? 'Available' : 'Pickup Only'}</div>
+                          </div>
+                        ) : null}
                       </div>
-                      <div className="bg-background p-3 rounded-lg border border-border">
-                        <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Price Per Unit</div>
-                        <div className="font-bold text-sm text-foreground">{formatPrice(listing.b2bPricePerUnit || 0)}</div>
+                    </div>
+                  )}
+
+                  {/* Structured Product Details */}
+                  {listing.dynamicFields && Object.keys(listing.dynamicFields).length > 0 && (
+                    <div className="mb-8">
+                      <h3 className="font-display font-semibold text-lg mb-4">Key Specifications</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {Object.entries(listing.dynamicFields).map(([key, value]) => (
+                          <div key={key} className="bg-secondary p-3.5 rounded-lg border border-border/50">
+                            <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">{key}</div>
+                            <div className="font-bold text-sm text-foreground">{String(value)}</div>
+                          </div>
+                        ))}
                       </div>
-                      {listing.b2bStock ? (
-                        <div className="bg-background p-3 rounded-lg border border-border">
-                          <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Available Stock</div>
-                          <div className="font-bold text-sm text-foreground">{listing.b2bStock} Units</div>
-                        </div>
-                      ) : null}
-                      {listing.b2bBusinessName ? (
-                        <div className="bg-background p-3 rounded-lg border border-border">
-                          <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Business Name</div>
-                          <div className="font-bold text-sm text-foreground truncate">{listing.b2bBusinessName}</div>
-                        </div>
-                      ) : null}
-                      {listing.b2bGstNumber ? (
-                        <div className="bg-background p-3 rounded-lg border border-border">
-                          <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">GST Number</div>
-                          <div className="font-bold text-sm text-foreground">{listing.b2bGstNumber}</div>
-                        </div>
-                      ) : null}
-                      {listing.b2bDelivery !== null && listing.b2bDelivery !== undefined ? (
-                        <div className="bg-background p-3 rounded-lg border border-border">
-                          <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Delivery</div>
-                          <div className="font-bold text-sm text-foreground">{listing.b2bDelivery ? 'Available' : 'Pickup Only'}</div>
-                        </div>
-                      ) : null}
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Structured Product Details */}
-                {listing.dynamicFields && Object.keys(listing.dynamicFields).length > 0 && (
-                  <div className="mb-8">
-                    <h3 className="font-display font-semibold text-lg mb-4">Key Specifications</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {Object.entries(listing.dynamicFields).map(([key, value]) => (
-                        <div key={key} className="bg-secondary p-3.5 rounded-lg border border-border/50">
-                          <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">{key}</div>
-                          <div className="font-bold text-sm text-foreground">{String(value)}</div>
+                  {/* Video Embed */}
+                  {videoId && (
+                    <div className="mb-8 p-1 border border-border rounded-xl bg-secondary/20">
+                      <div className="flex items-center gap-2 mb-3 px-3 pt-3">
+                        <Youtube className="h-5 w-5 text-red-600" />
+                        <h3 className="font-display font-semibold text-lg">Product Video</h3>
+                      </div>
+                      <div className="relative aspect-video rounded-lg overflow-hidden bg-black/5">
+                        <iframe
+                          src={`https://www.youtube.com/embed/${videoId}?loop=0&controls=1`}
+                          title="YouTube video player"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          allowFullScreen
+                          className="absolute inset-0 w-full h-full border-0"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Map Embed */}
+                  {
+                    mapEmbedUrl && (
+                      <div className="mb-8 p-1 border border-border rounded-xl bg-secondary/20">
+                        <div className="flex items-center gap-2 mb-3 px-3 pt-3">
+                          <MapPin className="h-5 w-5 text-emerald-600" />
+                          <h3 className="font-display font-semibold text-lg">Property Location</h3>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                        <div className="relative aspect-video rounded-lg overflow-hidden bg-black/5">
+                          <iframe
+                            src={mapEmbedUrl}
+                            title="Location Map"
+                            allowFullScreen
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                            className="absolute inset-0 w-full h-full border-0"
+                          />
+                        </div>
+                      </div>
+                    )
+                  }
 
-                {/* Video Embed */}
-                {videoId && (
-                  <div className="mb-8 p-1 border border-border rounded-xl bg-secondary/20">
-                    <div className="flex items-center gap-2 mb-3 px-3 pt-3">
-                      <Youtube className="h-5 w-5 text-red-600" />
-                      <h3 className="font-display font-semibold text-lg">Product Video</h3>
-                    </div>
-                    <div className="relative aspect-video rounded-lg overflow-hidden bg-black/5">
-                      <iframe
-                        src={`https://www.youtube.com/embed/${videoId}?loop=0&controls=1`}
-                        title="YouTube video player"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        allowFullScreen
-                        className="absolute inset-0 w-full h-full border-0"
-                      />
-                    </div>
+                  <div className="border-t border-border pt-6">
+                    <h3 className="font-display font-semibold text-lg mb-3">Description</h3>
+                    <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                      {listing.description}
+                    </p>
                   </div>
-                )}
-
-                {/* Map Embed */}
-                {mapEmbedUrl && (
-                  <div className="mb-8 p-1 border border-border rounded-xl bg-secondary/20">
-                    <div className="flex items-center gap-2 mb-3 px-3 pt-3">
-                      <MapPin className="h-5 w-5 text-emerald-600" />
-                      <h3 className="font-display font-semibold text-lg">Property Location</h3>
-                    </div>
-                    <div className="relative aspect-video rounded-lg overflow-hidden bg-black/5">
-                      <iframe
-                        src={mapEmbedUrl}
-                        title="Location Map"
-                        allowFullScreen
-                        loading="lazy"
-                        referrerPolicy="no-referrer-when-downgrade"
-                        className="absolute inset-0 w-full h-full border-0"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="border-t border-border pt-6">
-                  <h3 className="font-display font-semibold text-lg mb-3">Description</h3>
-                  <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                    {listing.description}
-                  </p>
                 </div>
               </div>
             </div>
 
             {/* Right Column - Price & Seller */}
-            <div className="space-y-6">
+            <div className="space-y-6" >
               {/* Price Card */}
-              <div className="card-premium p-6 sticky top-24">
+              <div className="card-premium p-6 sticky top-24" >
                 <div className="text-3xl font-display font-bold text-foreground mb-1">
                   {listing.isB2B ? formatPrice(listing.b2bPricePerUnit || 0) : formatPrice(listing.price)}
                 </div>
-                {listing.isB2B ? (
-                  <div className="text-sm font-medium text-muted-foreground mb-6">
-                    Price Per Unit • Minimum Order: <span className="text-foreground">{listing.b2bMoq} Units</span>
-                  </div>
-                ) : (
-                  <div className="mb-6"></div>
-                )}
+                {
+                  listing.isB2B ? (
+                    <div className="text-sm font-medium text-muted-foreground mb-6">
+                      Price Per Unit • Minimum Order: <span className="text-foreground">{listing.b2bMoq} Units</span>
+                    </div>
+                  ) : (
+                    <div className="mb-6"></div>
+                  )
+                }
 
                 {/* Action Buttons */}
                 <div className="hidden lg:flex items-center gap-3 mb-6">
@@ -616,16 +631,15 @@ const ListingDetail = () => {
             </div>
           </div>
         </div>
-      </main>
+      </main >
 
       <Footer />
 
       {/* Mobile Sticky Action Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-md border-t border-border z-40 flex items-center gap-3">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 pb-safe bg-background border-t shadow-[0_-4px_12px_rgba(0,0,0,0.08)] z-40 flex items-center justify-between gap-2 rounded-t-2xl">
         <Button
           variant="accent"
-          size="lg"
-          className="flex-[2] gap-2 shadow-sm font-bold"
+          className="flex-[1.5] h-12 gap-2 shadow-sm font-bold rounded-xl"
           onClick={() => setIsContactOpen(true)}
         >
           <MessageCircle className="h-5 w-5 shrink-0" />
@@ -633,10 +647,9 @@ const ListingDetail = () => {
         </Button>
         <Button
           variant="outline"
-          size="lg"
           onClick={toggleWishlist}
           className={cn(
-            "flex-1 gap-2 font-bold",
+            "flex-1 h-12 gap-2 font-bold rounded-xl bg-background",
             isFavorited && "text-destructive border-destructive bg-destructive/5"
           )}
         >
@@ -645,9 +658,8 @@ const ListingDetail = () => {
         </Button>
         <Button
           variant="outline"
-          size="lg"
           onClick={handleShare}
-          className="px-3 shrink-0"
+          className="w-12 h-12 shrink-0 rounded-xl bg-background flex items-center justify-center p-0"
         >
           <Share2 className="h-5 w-5" />
         </Button>

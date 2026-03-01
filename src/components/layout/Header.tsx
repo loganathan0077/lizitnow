@@ -20,7 +20,9 @@ import {
   Heart,
   Settings,
   FileText,
-  ChevronDown
+  ChevronDown,
+  UserPlus,
+  LayoutDashboard
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useLocationContext } from '@/context/LocationContext';
@@ -141,6 +143,18 @@ const Header = () => {
       setSearchQuery(q);
     }
   }, [location.search]);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
 
   const handleSearch = (e?: React.KeyboardEvent | React.MouseEvent) => {
     if (e && 'key' in e && e.key !== 'Enter') return;
@@ -332,7 +346,7 @@ const Header = () => {
                           <User className="h-4 w-4 text-muted-foreground" />
                           Dashboard
                         </Link>
-                        <Link to="/dashboard" onClick={() => setIsAccountOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors">
+                        <Link to="/dashboard/listings" onClick={() => setIsAccountOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors">
                           <FileText className="h-4 w-4 text-muted-foreground" />
                           My Listings
                         </Link>
@@ -395,70 +409,92 @@ const Header = () => {
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden pb-4 animate-slide-up">
-          {/* Mobile Search */}
-          <div className="relative mb-4">
-            <Search
-              className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground cursor-pointer hover:text-primary transition-colors"
-              onClick={handleSearch}
-            />
-            <input
-              type="text"
-              placeholder="Search products..."
-              className="w-full h-11 pl-12 pr-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleSearch}
-            />
-          </div>
+        <div className="fixed inset-0 z-[100] md:hidden">
+          {/* Overlay Container */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
 
-          {/* Mobile Nav Links */}
-          <div className="flex flex-col gap-2">
-            {!isAuthenticated && (
-              <Button variant="outline" className="w-full justify-start" asChild>
-                <Link to="/login">
-                  <LogIn className="h-5 w-5" />
-                  <span>Login / Sign Up</span>
-                </Link>
-              </Button>
-            )}
+          {/* Drawer Panel */}
+          <div className="absolute top-0 right-0 h-[100vh] w-[80%] max-w-[320px] bg-background shadow-2xl overflow-y-auto transform transition-transform duration-300 ease-in-out p-5 flex flex-col z-10 animate-slide-left">
 
-            <Button variant="accent" className="w-full justify-start" asChild>
-              <Link to={isAuthenticated ? "/post-ad" : "/login"}>
-                <Plus className="h-5 w-5" />
-                <span>Post Ad</span>
-              </Link>
-            </Button>
+            {/* Header & Close Button */}
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-border text-foreground tracking-tight">
+              <div className="font-display font-bold text-lg flex items-center gap-2">
+                <Menu className="h-5 w-5 text-primary" /> Menu
+              </div>
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-foreground transition-colors"
+                aria-label="Close menu"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-            {isAuthenticated && (
-              <>
-                <Link
-                  to="/dashboard/wallet"
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary"
-                >
-                  <Wallet className="h-5 w-5 text-amber" />
-                  <span className="font-semibold">0 Tokens</span>
-                </Link>
-                <Button variant="ghost" className="w-full justify-start" asChild>
-                  <Link to="/dashboard">
-                    <User className="h-5 w-5" />
-                    <span>My Dashboard</span>
-                  </Link>
-                </Button>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-destructive hover:bg-destructive/10 transition-colors w-full text-left"
-                >
-                  <LogOut className="h-5 w-5" />
-                  <span className="font-semibold">Logout</span>
-                </button>
-              </>
-            )}
-          </div>
+            {/* Mobile Nav Links */}
+            <div className="flex flex-col gap-3">
+              {!isAuthenticated ? (
+                <>
+                  <Button variant="outline" className="w-full justify-start h-12 rounded-xl text-base text-foreground font-semibold" asChild onClick={() => setIsMobileMenuOpen(false)}>
+                    <Link to="/login">
+                      <LogIn className="h-5 w-5 mr-3 text-muted-foreground" />
+                      <span>Login</span>
+                    </Link>
+                  </Button>
+                  <Button variant="accent" className="w-full justify-start h-12 rounded-xl text-base shadow-sm font-semibold" asChild onClick={() => setIsMobileMenuOpen(false)}>
+                    <Link to="/register">
+                      <UserPlus className="h-5 w-5 mr-3" />
+                      <span>Register</span>
+                    </Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-base font-semibold hover:bg-secondary/80" asChild onClick={() => setIsMobileMenuOpen(false)}>
+                    <Link to="/dashboard">
+                      <LayoutDashboard className="h-5 w-5 mr-3 text-muted-foreground" />
+                      <span>Dashboard</span>
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-base font-semibold hover:bg-secondary/80" asChild onClick={() => setIsMobileMenuOpen(false)}>
+                    <Link to="/dashboard/listings">
+                      <FileText className="h-5 w-5 mr-3 text-muted-foreground" />
+                      <span>My Listings</span>
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-base font-semibold hover:bg-secondary/80" asChild onClick={() => setIsMobileMenuOpen(false)}>
+                    <Link to="/dashboard/wallet">
+                      <Wallet className="h-5 w-5 mr-3 text-muted-foreground" />
+                      <span>Wallet</span>
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-base font-semibold hover:bg-secondary/80" asChild onClick={() => setIsMobileMenuOpen(false)}>
+                    <Link to="/dashboard/wishlist">
+                      <Heart className="h-5 w-5 mr-3 text-muted-foreground" />
+                      <span>Wishlist</span>
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-base font-semibold hover:bg-secondary/80" asChild onClick={() => setIsMobileMenuOpen(false)}>
+                    <Link to="/dashboard/settings">
+                      <Settings className="h-5 w-5 mr-3 text-muted-foreground" />
+                      <span>Settings</span>
+                    </Link>
+                  </Button>
 
-          {/* Dynamic Mobile Categories Accordion */}
-          <div className="max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-            <MobileCategoryAccordion onClose={() => setIsMobileMenuOpen(false)} />
+                  <div className="border-t border-border mt-4 pt-4">
+                    <button
+                      onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}
+                      className="flex items-center px-4 py-4 rounded-xl text-destructive hover:bg-destructive/10 transition-colors w-full text-left"
+                    >
+                      <LogOut className="h-5 w-5 mr-3 shrink-0" />
+                      <span className="font-semibold text-base">Logout</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
