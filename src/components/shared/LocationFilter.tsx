@@ -16,18 +16,90 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
-import { locations } from "@/data/mockData"
+
+// We need to declare google on window
+declare global {
+    interface Window {
+        google: any;
+    }
+}
 
 interface LocationFilterProps {
     value: string
     onChange: (value: string) => void
+    onCoordinatesChange?: (coords: { lat: number, lng: number } | null) => void
     className?: string
     placeholder?: string
 }
 
-export function LocationFilter({ value, onChange, className, placeholder = "Select location" }: LocationFilterProps) {
+export function LocationFilter({ value, onChange, onCoordinatesChange, className, placeholder = "Select location" }: LocationFilterProps) {
     const [open, setOpen] = React.useState(false)
     const [detecting, setDetecting] = React.useState(false)
+    const [searchQuery, setSearchQuery] = React.useState("");
+    const [predictions, setPredictions] = React.useState<any[]>([]);
+    const [isGoogleReady, setIsGoogleReady] = React.useState(false);
+
+    React.useEffect(() => {
+        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+        if (!apiKey) return;
+        if (window.google && window.google.maps && window.google.maps.places) {
+            setIsGoogleReady(true);
+            return;
+        }
+        const scriptId = 'google-maps-places-script';
+        if (!document.getElementById(scriptId)) {
+            const script = document.createElement('script');
+            script.id = scriptId;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+            script.async = true;
+            script.defer = true;
+            script.onload = () => setIsGoogleReady(true);
+            document.head.appendChild(script);
+        } else {
+            const script = document.getElementById(scriptId) as HTMLScriptElement;
+            script.addEventListener('load', () => setIsGoogleReady(true));
+        }
+    }, []);
+
+    React.useEffect(() => {
+        if (!isGoogleReady || !searchQuery) {
+            setPredictions([]);
+            return;
+        }
+
+        const debounce = setTimeout(() => {
+            const service = new window.google.maps.places.AutocompleteService();
+            service.getPlacePredictions({
+                input: searchQuery,
+                types: ['(regions)'],
+                componentRestrictions: { country: 'in' }
+            }, (results: any, status: any) => {
+                if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
+                    setPredictions(results);
+                } else {
+                    setPredictions([]);
+                }
+            });
+        }, 300);
+
+        return () => clearTimeout(debounce);
+    }, [searchQuery, isGoogleReady]);
+
+    const handleSelectLocation = (placeId: string, description: string) => {
+        onChange(description);
+        setOpen(false);
+
+        if (onCoordinatesChange && isGoogleReady) {
+            const geocoder = new window.google.maps.Geocoder();
+            geocoder.geocode({ placeId }, (results: any, status: any) => {
+                if (status === 'OK' && results && results[0]) {
+                    const lat = results[0].geometry.location.lat();
+                    const lng = results[0].geometry.location.lng();
+                    onCoordinatesChange({ lat, lng });
+                }
+            });
+        }
+    };
 
     const detectCurrentLocation = async () => {
         if (!navigator.geolocation) {
@@ -51,6 +123,9 @@ export function LocationFilter({ value, onChange, className, placeholder = "Sele
                         data.address?.state ||
                         "Unknown"
                     onChange(city)
+                    if (onCoordinatesChange) {
+                        onCoordinatesChange({ lat: latitude, lng: longitude })
+                    }
                     setOpen(false)
                 } catch {
                     alert("Could not detect your location. Please try again.")
@@ -66,6 +141,9 @@ export function LocationFilter({ value, onChange, className, placeholder = "Sele
         )
     }
 
+    // Default static locations fallback if Google isn't ready or input is empty
+    const defaultStaticLocations = ["All Locations", "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Coimbatore", "Chennai", "Kolkata"];
+
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
@@ -73,20 +151,24 @@ export function LocationFilter({ value, onChange, className, placeholder = "Sele
                     variant="ghost"
                     role="combobox"
                     aria-expanded={open}
-                    className={cn("w-full justify-between hover:bg-transparent", className)}
+                    className={cn("w-full justify-between hover:bg-transparent px-3", className)}
                 >
-                    <div className="flex items-center gap-2 truncate">
-                        <MapPin className="h-4 w-4 shrink-0 opacity-50" />
-                        <span className="truncate">
+                    <div className="flex items-center gap-2 truncate text-foreground">
+                        <MapPin className="h-4 w-4 shrink-0 opacity-50 text-foreground" />
+                        <span className="truncate text-foreground">
                             {value === "All Locations" ? "All Locations" : value}
                         </span>
                     </div>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-foreground" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
-                <Command>
-                    <CommandInput placeholder="Search location..." />
+                <Command shouldFilter={false}>
+                    <CommandInput
+                        placeholder={isGoogleReady ? "Search for a city..." : "Select location (Map API needed for search)..."}
+                        value={searchQuery}
+                        onValueChange={setSearchQuery}
+                    />
                     {/* Current Location Button */}
                     <div className="px-2 pt-2 pb-1">
                         <button
@@ -105,24 +187,39 @@ export function LocationFilter({ value, onChange, className, placeholder = "Sele
                     <CommandList>
                         <CommandEmpty>No location found.</CommandEmpty>
                         <CommandGroup>
-                            {locations.map((location) => (
-                                <CommandItem
-                                    key={location}
-                                    value={location}
-                                    onSelect={(currentValue) => {
-                                        onChange(currentValue === value ? "" : currentValue)
-                                        setOpen(false)
-                                    }}
-                                >
-                                    <Check
-                                        className={cn(
-                                            "mr-2 h-4 w-4",
-                                            value === location ? "opacity-100" : "opacity-0"
-                                        )}
-                                    />
-                                    {location}
-                                </CommandItem>
-                            ))}
+                            {searchQuery && predictions.length > 0 ? (
+                                predictions.map((prediction) => (
+                                    <CommandItem
+                                        key={prediction.place_id}
+                                        value={prediction.description}
+                                        onSelect={() => handleSelectLocation(prediction.place_id, prediction.structured_formatting?.main_text || prediction.description)}
+                                    >
+                                        <MapPin className="mr-2 h-4 w-4 opacity-50" />
+                                        {prediction.description}
+                                    </CommandItem>
+                                ))
+                            ) : (
+                                defaultStaticLocations.map((location) => (
+                                    <CommandItem
+                                        key={location}
+                                        value={location}
+                                        onSelect={(currentValue) => {
+                                            onChange(currentValue === value ? "" : currentValue)
+                                            if (onCoordinatesChange) onCoordinatesChange(null)
+                                            setOpen(false)
+                                            setSearchQuery("")
+                                        }}
+                                    >
+                                        <Check
+                                            className={cn(
+                                                "mr-2 h-4 w-4",
+                                                value === location ? "opacity-100" : "opacity-0"
+                                            )}
+                                        />
+                                        {location}
+                                    </CommandItem>
+                                ))
+                            )}
                         </CommandGroup>
                     </CommandList>
                 </Command>
@@ -130,4 +227,3 @@ export function LocationFilter({ value, onChange, className, placeholder = "Sele
         </Popover>
     )
 }
-

@@ -121,16 +121,6 @@ const Listings = () => {
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [detectingLocation, setDetectingLocation] = useState(false);
 
-  // Detect user location on mount
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => { } // silently fail
-      );
-    }
-  }, []);
-
   const [dynamicFilters, setDynamicFilters] = useState<Record<string, string>>({});
 
   // Real backend ads + loading state
@@ -453,6 +443,7 @@ const Listings = () => {
                   <LocationFilter
                     value={selectedLocation}
                     onChange={handleLocationChange}
+                    onCoordinatesChange={setUserCoords}
                     className="w-full h-10 px-3 rounded-lg bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 hover:bg-secondary/90 transition-colors"
                   />
                 </div>
@@ -712,6 +703,7 @@ const Listings = () => {
                     <LocationFilter
                       value={selectedLocation}
                       onChange={handleLocationChange}
+                      onCoordinatesChange={setUserCoords}
                       className="w-full h-10 px-3 rounded-lg bg-secondary border-0 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 hover:bg-secondary/90"
                     />
                   </div>

@@ -4,9 +4,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, BadgeCheck, Loader2, Coins, Calendar, Image as ImageIcon, Youtube, MapPin, ArrowLeft, CheckCircle2, X } from 'lucide-react';
+import { ShieldAlert, BadgeCheck, Loader2, Coins, Calendar, Image as ImageIcon, Youtube, MapPin, ArrowLeft, CheckCircle2, X, Crosshair } from 'lucide-react';
 import { toast } from 'sonner';
 import { Listing } from '@/types/marketplace';
+import { LocationAutocomplete } from '@/components/shared/LocationAutocomplete';
 
 export interface Category {
     id: string;
@@ -112,14 +113,16 @@ const PostAd = () => {
     // UI Navigation State
     const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
-    // Form State
+    const [isDetectingLocation, setIsDetectingLocation] = useState(false);
     const [formData, setFormData] = useState({
         title: '',
         price: '',
         categoryId: '',
         subcategoryId: '',
         description: '',
-        location: 'Mumbai, India', // Default for now
+        location: '',
+        latitude: null as number | null,
+        longitude: null as number | null,
         condition: 'new',
         videoUrl: '',
         mapUrl: '',
@@ -142,6 +145,42 @@ const PostAd = () => {
 
     const handleDynamicFieldChange = (name: string, value: string) => {
         setDynamicFields(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleLocationSelect = (place: { name: string; lat: number; lng: number }) => {
+        setFormData(prev => ({ ...prev, location: place.name, latitude: place.lat, longitude: place.lng }));
+    };
+
+    const detectCurrentLocation = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (!navigator.geolocation) {
+            toast.error("Geolocation is not supported by your browser.");
+            return;
+        }
+        setIsDetectingLocation(true);
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                try {
+                    const { latitude, longitude } = position.coords;
+                    const res = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`
+                    );
+                    const data = await res.json();
+                    const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || data.address?.state || "Current Location";
+                    setFormData(prev => ({ ...prev, location: city, latitude, longitude }));
+                    toast.success("Location set to your current position!");
+                } catch {
+                    toast.error("Could not fetch address for your location.");
+                } finally {
+                    setIsDetectingLocation(false);
+                }
+            },
+            () => {
+                toast.error("Location access denied. Please enable location permissions.");
+                setIsDetectingLocation(false);
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
     };
 
     // Reset dynamic fields when subcategory changes
@@ -267,27 +306,19 @@ const PostAd = () => {
             return;
         }
 
+        if (!formData.latitude || !formData.longitude || !formData.location) {
+            toast.error("Location Required", { description: "Please search and select a specific location from the dropdown, or use the Current Location button." });
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
-            // Capture geolocation silently (non-blocking)
-            let latitude: number | null = null;
-            let longitude: number | null = null;
-            try {
-                const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
-                });
-                latitude = pos.coords.latitude;
-                longitude = pos.coords.longitude;
-            } catch {
-                // Geolocation denied or unavailable — continue without coordinates
-            }
-
             const formDataToSend = new FormData();
 
             // Append basic fields
             Object.entries(formData).forEach(([key, value]) => {
-                if (value !== undefined && value !== null) {
+                if (value !== undefined && value !== null && key !== 'latitude' && key !== 'longitude') {
                     formDataToSend.append(key, value.toString());
                 }
             });
@@ -306,8 +337,8 @@ const PostAd = () => {
             }
 
             // Append coordinates
-            if (latitude) formDataToSend.append('latitude', latitude.toString());
-            if (longitude) formDataToSend.append('longitude', longitude.toString());
+            formDataToSend.append('latitude', formData.latitude.toString());
+            formDataToSend.append('longitude', formData.longitude.toString());
 
             const token = localStorage.getItem('token');
             const res = await fetch(`${API_BASE}/api/ads/post`, {
@@ -671,6 +702,30 @@ const PostAd = () => {
                                                 </div>
                                             </div>
                                         )}
+
+                                        <div className="pt-4 border-t border-border">
+                                            <label className="block text-sm font-medium text-foreground mb-2">Location *</label>
+                                            <LocationAutocomplete
+                                                value={formData.location}
+                                                onSelectCallback={handleLocationSelect}
+                                                required
+                                            />
+                                            <div className="mt-3">
+                                                <button
+                                                    onClick={detectCurrentLocation}
+                                                    disabled={isDetectingLocation}
+                                                    type="button"
+                                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition-colors disabled:opacity-50"
+                                                >
+                                                    {isDetectingLocation ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <Crosshair className="h-4 w-4" />
+                                                    )}
+                                                    {isDetectingLocation ? "Detecting location..." : "📍 Use My Current Location"}
+                                                </button>
+                                            </div>
+                                        </div>
 
                                         <div>
                                             <label className="block text-sm font-medium text-foreground mb-2">Description</label>

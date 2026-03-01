@@ -613,6 +613,10 @@ app.post('/api/ads/post', authenticate, upload.array('images', 5), async (req, r
             return res.status(400).json({ error: 'At least one image is required' });
         }
 
+        if (!latitude || !longitude || isNaN(parseFloat(latitude)) || isNaN(parseFloat(longitude))) {
+            return res.status(400).json({ error: 'Valid Location coordinates (latitude and longitude) are strictly required to post an ad.' });
+        }
+
         // Upload images to Cloudinary
         const uploadPromises = req.files.map(file => uploadToCloudinary(file.buffer));
         const imageUrls = await Promise.all(uploadPromises);
