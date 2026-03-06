@@ -30,65 +30,79 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 // ==========================================
 // PASSPORT GOOGLE OAUTH SETUP
 // ==========================================
-passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5001/auth/google/callback',
-    scope: ['profile', 'email']
-}, async (accessToken, refreshToken, profile, done) => {
-    try {
-        const email = profile.emails[0].value;
-        const googleId = profile.id;
-        const name = profile.displayName;
-        const avatar = profile.photos && profile.photos[0] ? profile.photos[0].value : null;
+let googleOAuthEnabled = false;
 
-        // Check if user exists by email or googleId
-        let user = await prisma.user.findFirst({
-            where: {
-                OR: [
-                    { email },
-                    { googleId }
-                ]
+try {
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+        console.warn('[OAuth] GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET not set. Google OAuth disabled.');
+    } else {
+        passport.use(new GoogleStrategy({
+            clientID: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5001/auth/google/callback',
+            scope: ['profile', 'email']
+        }, async (accessToken, refreshToken, profile, done) => {
+            try {
+                const email = profile.emails[0].value;
+                const googleId = profile.id;
+                const name = profile.displayName;
+                const avatar = profile.photos && profile.photos[0] ? profile.photos[0].value : null;
+
+                // Check if user exists by email or googleId
+                let user = await prisma.user.findFirst({
+                    where: {
+                        OR: [
+                            { email },
+                            { googleId }
+                        ]
+                    }
+                });
+
+                if (user) {
+                    // Link googleId if not already linked
+                    if (!user.googleId) {
+                        user = await prisma.user.update({
+                            where: { id: user.id },
+                            data: { googleId, avatarUrl: user.avatarUrl || avatar }
+                        });
+                    }
+                } else {
+                    // Create new user
+                    user = await prisma.user.create({
+                        data: {
+                            name,
+                            email,
+                            password: null,
+                            googleId,
+                            avatarUrl: avatar,
+                            referralCode: crypto.randomBytes(3).toString('hex').toUpperCase(),
+                        }
+                    });
+                }
+
+                return done(null, user);
+            } catch (error) {
+                return done(error, null);
+            }
+        }));
+
+        passport.serializeUser((user, done) => done(null, user.id));
+        passport.deserializeUser(async (id, done) => {
+            try {
+                const user = await prisma.user.findUnique({ where: { id } });
+                done(null, user);
+            } catch (error) {
+                done(error, null);
             }
         });
 
-        if (user) {
-            // Link googleId if not already linked
-            if (!user.googleId) {
-                user = await prisma.user.update({
-                    where: { id: user.id },
-                    data: { googleId, avatarUrl: user.avatarUrl || avatar }
-                });
-            }
-        } else {
-            // Create new user
-            user = await prisma.user.create({
-                data: {
-                    name,
-                    email,
-                    password: null,
-                    googleId,
-                    avatarUrl: avatar,
-                    referralCode: crypto.randomBytes(3).toString('hex').toUpperCase(),
-                }
-            });
-        }
-
-        return done(null, user);
-    } catch (error) {
-        return done(error, null);
+        googleOAuthEnabled = true;
+        console.log('[OAuth] Google OAuth configured successfully.');
+        console.log('[OAuth] Callback URL:', process.env.GOOGLE_CALLBACK_URL);
     }
-}));
-
-passport.serializeUser((user, done) => done(null, user.id));
-passport.deserializeUser(async (id, done) => {
-    try {
-        const user = await prisma.user.findUnique({ where: { id } });
-        done(null, user);
-    } catch (error) {
-        done(error, null);
-    }
-});
+} catch (err) {
+    console.error('[OAuth] Failed to initialize Google OAuth:', err.message);
+}
 
 app.use(passport.initialize());
 
@@ -405,6 +419,7 @@ app.put('/api/auth/profile', authenticate, async (req, res) => {
 // Debug route to check Google OAuth configuration
 app.get('/auth/google/debug', (req, res) => {
     res.json({
+        googleOAuthEnabled,
         GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? 'SET' : 'MISSING',
         GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? 'SET' : 'MISSING',
         GOOGLE_CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL || 'NOT SET (using default)',
@@ -414,6 +429,10 @@ app.get('/auth/google/debug', (req, res) => {
 
 // Initiate Google OAuth — saves the frontend origin in state so we know where to redirect back
 app.get('/auth/google', (req, res, next) => {
+    if (!googleOAuthEnabled) {
+        return res.status(500).json({ error: 'Google OAuth is not configured on this server. Check GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET env vars.' });
+    }
+
     // Capture the frontend origin from Referer header or use FRONTEND_URL
     const referer = req.headers.referer || req.headers.origin || '';
     let frontendOrigin = FRONTEND_URL;
