@@ -24,6 +24,7 @@ import CategoryView from './pages/CategoryView';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import Sitemap from './pages/Sitemap';
+import GoogleCallback from './pages/GoogleCallback';
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,7 @@ const App = () => (
             <Route path="/listing/:id" element={<ListingDetail />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Login />} />
+            <Route path="/auth/google/callback" element={<GoogleCallback />} />
             <Route
               path="/dashboard"
               element={

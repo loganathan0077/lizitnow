@@ -3,6 +3,9 @@ const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const Razorpay = require('razorpay');
 const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
@@ -20,6 +23,74 @@ app.use(cors({
 app.use(express.json());
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key-for-development';
+
+// Frontend URL for OAuth redirects
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+// ==========================================
+// PASSPORT GOOGLE OAUTH SETUP
+// ==========================================
+passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5001/auth/google/callback',
+    scope: ['profile', 'email']
+}, async (accessToken, refreshToken, profile, done) => {
+    try {
+        const email = profile.emails[0].value;
+        const googleId = profile.id;
+        const name = profile.displayName;
+        const avatar = profile.photos && profile.photos[0] ? profile.photos[0].value : null;
+
+        // Check if user exists by email or googleId
+        let user = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { email },
+                    { googleId }
+                ]
+            }
+        });
+
+        if (user) {
+            // Link googleId if not already linked
+            if (!user.googleId) {
+                user = await prisma.user.update({
+                    where: { id: user.id },
+                    data: { googleId, avatarUrl: user.avatarUrl || avatar }
+                });
+            }
+        } else {
+            // Create new user
+            user = await prisma.user.create({
+                data: {
+                    name,
+                    email,
+                    password: null,
+                    googleId,
+                    avatarUrl: avatar,
+                    referralCode: crypto.randomBytes(3).toString('hex').toUpperCase(),
+                }
+            });
+        }
+
+        return done(null, user);
+    } catch (error) {
+        return done(error, null);
+    }
+}));
+
+passport.serializeUser((user, done) => done(null, user.id));
+passport.deserializeUser(async (id, done) => {
+    try {
+        const user = await prisma.user.findUnique({ where: { id } });
+        done(null, user);
+    } catch (error) {
+        done(error, null);
+    }
+});
+
+app.use(passport.initialize());
 
 // Razorpay instance
 const razorpay = new Razorpay({
@@ -180,6 +251,17 @@ app.post('/api/auth/register', async (req, res) => {
     try {
         const { name, email, password, phone, referredByCode, gstin } = req.body;
 
+        // Validate required fields
+        if (!name || !email || !password) {
+            return res.status(400).json({ error: 'Name, email, and password are required' });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ error: 'Invalid email format' });
+        }
+
         // Check if user already exists
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) return res.status(400).json({ error: 'Email already exists' });
@@ -196,11 +278,14 @@ app.post('/api/auth/register', async (req, res) => {
             }
         }
 
+        // Hash password with bcrypt
+        const hashedPassword = await bcrypt.hash(password, 12);
+
         const newUser = await prisma.user.create({
             data: {
                 name,
                 email,
-                password, // NOTE: Use bcrypt in production
+                password: hashedPassword,
                 phone,
                 referredBy,
                 referralCode: generateReferralCode(),
@@ -236,7 +321,18 @@ app.post('/api/auth/login', async (req, res) => {
         const { email, password } = req.body;
         const user = await prisma.user.findUnique({ where: { email } });
 
-        if (!user || user.password !== password) {
+        if (!user) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        // If user signed up via Google and has no password
+        if (!user.password) {
+            return res.status(401).json({ error: 'This account uses Google login. Please use "Continue with Google" instead.' });
+        }
+
+        // Compare with bcrypt
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
@@ -301,6 +397,32 @@ app.put('/api/auth/profile', authenticate, async (req, res) => {
         });
     }
 });
+
+// ==========================================
+// GOOGLE OAUTH ROUTES
+// ==========================================
+
+// Initiate Google OAuth
+app.get('/auth/google', passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    session: false
+}));
+
+// Google OAuth Callback
+app.get('/auth/google/callback',
+    passport.authenticate('google', { session: false, failureRedirect: '/login' }),
+    (req, res) => {
+        try {
+            const user = req.user;
+            const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+            // Redirect to frontend with token
+            res.redirect(`${FRONTEND_URL}/auth/google/callback?token=${token}`);
+        } catch (error) {
+            console.error('Google OAuth callback error:', error);
+            res.redirect(`${FRONTEND_URL}/login?error=oauth_failed`);
+        }
+    }
+);
 
 // ==========================================
 // CATEGORY ROUTES
