@@ -10,13 +10,18 @@ const GoogleCallback = () => {
     useEffect(() => {
         const token = searchParams.get('token');
         const error = searchParams.get('error');
+        const detail = searchParams.get('detail');
 
         if (error) {
-            setStatus('Sign in failed');
-            toast.error('Google Sign In Failed', {
-                description: 'Something went wrong. Please try again.',
-            });
-            setTimeout(() => navigate('/login'), 2000);
+            const errorMessages: Record<string, string> = {
+                'oauth_failed': `Google sign in failed${detail ? ': ' + detail : ''}`,
+                'oauth_no_user': 'Could not retrieve your Google account information',
+                'token_failed': 'Failed to create your session',
+            };
+            const msg = errorMessages[error] || 'Something went wrong. Please try again.';
+            setStatus(msg);
+            toast.error('Google Sign In Failed', { description: msg });
+            setTimeout(() => navigate('/login'), 3000);
             return;
         }
 
@@ -28,17 +33,17 @@ const GoogleCallback = () => {
             });
             navigate('/dashboard');
         } else {
-            setStatus('No authentication token received');
+            setStatus('No authentication token received. The Google login may not be configured correctly on the server.');
             toast.error('Authentication Error', {
                 description: 'No token received. Please try again.',
             });
-            setTimeout(() => navigate('/login'), 2000);
+            setTimeout(() => navigate('/login'), 3000);
         }
     }, [searchParams, navigate]);
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-background">
-            <div className="text-center">
+            <div className="text-center max-w-md px-4">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
                 <p className="text-foreground font-medium">{status}</p>
             </div>

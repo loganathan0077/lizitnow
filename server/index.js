@@ -402,27 +402,73 @@ app.put('/api/auth/profile', authenticate, async (req, res) => {
 // GOOGLE OAUTH ROUTES
 // ==========================================
 
-// Initiate Google OAuth
-app.get('/auth/google', passport.authenticate('google', {
-    scope: ['profile', 'email'],
-    session: false
-}));
+// Debug route to check Google OAuth configuration
+app.get('/auth/google/debug', (req, res) => {
+    res.json({
+        GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? 'SET' : 'MISSING',
+        GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? 'SET' : 'MISSING',
+        GOOGLE_CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL || 'NOT SET (using default)',
+        FRONTEND_URL: process.env.FRONTEND_URL || 'NOT SET (using default: http://localhost:5173)',
+    });
+});
 
-// Google OAuth Callback
-app.get('/auth/google/callback',
-    passport.authenticate('google', { session: false, failureRedirect: '/login' }),
-    (req, res) => {
+// Initiate Google OAuth — saves the frontend origin in state so we know where to redirect back
+app.get('/auth/google', (req, res, next) => {
+    // Capture the frontend origin from Referer header or use FRONTEND_URL
+    const referer = req.headers.referer || req.headers.origin || '';
+    let frontendOrigin = FRONTEND_URL;
+    if (referer) {
         try {
-            const user = req.user;
-            const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-            // Redirect to frontend with token
-            res.redirect(`${FRONTEND_URL}/auth/google/callback?token=${token}`);
-        } catch (error) {
-            console.error('Google OAuth callback error:', error);
-            res.redirect(`${FRONTEND_URL}/login?error=oauth_failed`);
+            const url = new URL(referer);
+            frontendOrigin = url.origin; // e.g. https://beta.doodlesstore.com
+        } catch (e) {
+            // ignore parse errors
         }
     }
-);
+
+    passport.authenticate('google', {
+        scope: ['profile', 'email'],
+        session: false,
+        state: Buffer.from(JSON.stringify({ frontendOrigin })).toString('base64')
+    })(req, res, next);
+});
+
+// Google OAuth Callback
+app.get('/auth/google/callback', (req, res, next) => {
+    passport.authenticate('google', { session: false }, (err, user, info) => {
+        // Decode the frontend origin from state
+        let frontendOrigin = FRONTEND_URL;
+        try {
+            if (req.query.state) {
+                const state = JSON.parse(Buffer.from(req.query.state, 'base64').toString());
+                if (state.frontendOrigin) {
+                    frontendOrigin = state.frontendOrigin;
+                }
+            }
+        } catch (e) {
+            console.error('Failed to parse OAuth state:', e);
+        }
+
+        if (err) {
+            console.error('Google OAuth error:', err);
+            return res.redirect(`${frontendOrigin}/login?error=oauth_failed&detail=${encodeURIComponent(err.message)}`);
+        }
+
+        if (!user) {
+            console.error('Google OAuth: no user returned', info);
+            return res.redirect(`${frontendOrigin}/login?error=oauth_no_user`);
+        }
+
+        try {
+            const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+            console.log('Google OAuth success, redirecting to:', `${frontendOrigin}/auth/google/callback?token=...`);
+            res.redirect(`${frontendOrigin}/auth/google/callback?token=${token}`);
+        } catch (error) {
+            console.error('Google OAuth token generation error:', error);
+            res.redirect(`${frontendOrigin}/login?error=token_failed`);
+        }
+    })(req, res, next);
+});
 
 // ==========================================
 // CATEGORY ROUTES
