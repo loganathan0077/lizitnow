@@ -5,7 +5,7 @@ services:
     region: singapore
     rootDir: server
     buildCommand: npm install
-    startCommand: npx prisma db push --accept-data-loss && node seed.js && node index.js
+    startCommand: node start.js
     envVars:
       - key: DATABASE_URL
         fromDatabase:
