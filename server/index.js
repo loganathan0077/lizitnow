@@ -12,6 +12,7 @@ const multer = require('multer');
 require('dotenv').config();
 const { generateInvoicePDF } = require('./utils/invoiceGenerator');
 const admin = require('firebase-admin');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -378,6 +379,115 @@ app.post('/api/auth/login', async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ==========================================
+// FORGOT / RESET PASSWORD
+// ==========================================
+
+// Forgot Password — send reset link via email
+app.post('/api/auth/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'Email is required' });
+
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) {
+            // Don't reveal if email exists or not (security)
+            return res.json({ message: 'If this email is registered, you will receive a password reset link.' });
+        }
+
+        // Google-only users can't reset password
+        if (user.googleId && !user.password) {
+            return res.json({ message: 'If this email is registered, you will receive a password reset link.' });
+        }
+
+        // Generate secure token
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const resetTokenExpiry = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { resetToken, resetTokenExpiry }
+        });
+
+        // Send email
+        const resetUrl = `${FRONTEND_URL}/reset-password?token=${resetToken}`;
+
+        const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST || 'smtp.gmail.com',
+            port: parseInt(process.env.SMTP_PORT || '587'),
+            secure: false,
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
+            },
+        });
+
+        await transporter.sendMail({
+            from: process.env.SMTP_FROM || process.env.SMTP_USER,
+            to: email,
+            subject: 'Reset Your Password — Liztitnow.com',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #333;">Password Reset</h2>
+                    <p>Hi ${user.name || 'there'},</p>
+                    <p>We received a request to reset your password. Click the button below to set a new password:</p>
+                    <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background-color: #e87461; color: white; text-decoration: none; border-radius: 8px; margin: 16px 0;">Reset Password</a>
+                    <p style="color: #666; font-size: 14px;">This link will expire in <strong>30 minutes</strong>.</p>
+                    <p style="color: #666; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+                    <p style="color: #999; font-size: 12px;">Liztitnow.com</p>
+                </div>
+            `,
+        });
+
+        res.json({ message: 'If this email is registered, you will receive a password reset link.' });
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        res.status(500).json({ error: 'Failed to process request. Please try again.' });
+    }
+});
+
+// Reset Password — validate token and update password
+app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+        const { token, password } = req.body;
+        if (!token || !password) {
+            return res.status(400).json({ error: 'Token and new password are required' });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters' });
+        }
+
+        const user = await prisma.user.findFirst({
+            where: {
+                resetToken: token,
+                resetTokenExpiry: { gte: new Date() }
+            }
+        });
+
+        if (!user) {
+            return res.status(400).json({ error: 'Invalid or expired reset link. Please request a new one.' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 12);
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                resetToken: null,
+                resetTokenExpiry: null
+            }
+        });
+
+        res.json({ message: 'Password reset successful! You can now login with your new password.' });
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(500).json({ error: 'Failed to reset password. Please try again.' });
     }
 });
 

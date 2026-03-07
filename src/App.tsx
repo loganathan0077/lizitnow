@@ -25,6 +25,8 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import Sitemap from './pages/Sitemap';
 import GoogleCallback from './pages/GoogleCallback';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 const queryClient = new QueryClient();
 
@@ -62,6 +64,8 @@ const App = () => (
             <Route path="/listing/:id" element={<ListingDetail />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/auth/google/callback" element={<GoogleCallback />} />
             <Route
               path="/dashboard"
