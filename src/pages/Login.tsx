@@ -366,8 +366,8 @@ const Login = () => {
                       <label className="block text-sm font-medium text-foreground mb-2">
                         Phone Number
                       </label>
-                      <div className="flex gap-2">
-                        <div className="w-20 h-12 px-3 rounded-xl bg-secondary flex items-center justify-center text-foreground font-medium">
+                      <div className="flex gap-2 overflow-hidden">
+                        <div className="w-16 shrink-0 h-12 px-2 rounded-xl bg-secondary flex items-center justify-center text-foreground font-medium text-sm">
                           +91
                         </div>
                         <input
@@ -376,7 +376,7 @@ const Login = () => {
                           onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                           placeholder="9876543210"
                           maxLength={10}
-                          className="flex-1 h-12 px-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          className="flex-1 min-w-0 h-12 px-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                     </div>
