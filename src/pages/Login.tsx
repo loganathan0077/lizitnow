@@ -1,5 +1,5 @@
 import API_BASE from '@/lib/api';
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import Header from '@/components/layout/Header';
@@ -11,8 +11,11 @@ import {
   ArrowRight,
   Eye,
   EyeOff,
-  CheckCircle
+  CheckCircle,
+  Loader2
 } from 'lucide-react';
+import { auth, RecaptchaVerifier, signInWithPhoneNumber } from '@/lib/firebase';
+import type { ConfirmationResult } from '@/lib/firebase';
 
 const Login = () => {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -29,13 +32,117 @@ const Login = () => {
   const [gstin, setGstin] = useState('');
   const [error, setError] = useState('');
 
+  // OTP State
+  const [otpStep, setOtpStep] = useState<'phone' | 'otp'>('phone');
+  const [otp, setOtp] = useState('');
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const recaptchaRef = useRef<any>(null);
+
   const navigate = useNavigate();
+
+  // Initialize reCAPTCHA when phone tab is selected
+  const setupRecaptcha = useCallback(() => {
+    if (recaptchaRef.current) return; // already set up
+    try {
+      recaptchaRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible',
+        callback: () => { /* reCAPTCHA solved */ },
+        'expired-callback': () => {
+          recaptchaRef.current = null;
+        }
+      });
+    } catch (err) {
+      console.error('reCAPTCHA setup error:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (method === 'phone') {
+      // Short delay to ensure DOM element exists
+      const timer = setTimeout(setupRecaptcha, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [method, setupRecaptcha]);
+
+  // Send OTP
+  const handleSendOTP = async () => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length !== 10) {
+      toast.error('Invalid phone number', { description: 'Please enter a valid 10-digit mobile number.' });
+      return;
+    }
+
+    setOtpSending(true);
+    try {
+      setupRecaptcha();
+      const fullPhone = `+91${cleanPhone}`;
+      const result = await signInWithPhoneNumber(auth, fullPhone, recaptchaRef.current);
+      setConfirmationResult(result);
+      setOtpStep('otp');
+      toast.success('OTP Sent!', { description: `Verification code sent to ${fullPhone}` });
+    } catch (err: any) {
+      console.error('OTP send error:', err);
+      const msg = err.code === 'auth/too-many-requests'
+        ? 'Too many attempts. Please try again later.'
+        : err.code === 'auth/invalid-phone-number'
+          ? 'Invalid phone number format.'
+          : 'Failed to send OTP. Please try again.';
+      toast.error('OTP Failed', { description: msg });
+      // Reset reCAPTCHA on fail
+      recaptchaRef.current = null;
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  // Verify OTP
+  const handleVerifyOTP = async () => {
+    if (!confirmationResult) return;
+    if (otp.length !== 6) {
+      toast.error('Invalid OTP', { description: 'Please enter the 6-digit code.' });
+      return;
+    }
+
+    setOtpVerifying(true);
+    try {
+      const credential = await confirmationResult.confirm(otp);
+      const idToken = await credential.user.getIdToken();
+
+      // Send Firebase token to backend
+      const res = await fetch(`${API_BASE}/api/auth/firebase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Backend auth failed');
+
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('token', data.token);
+      toast.success('Login Successful!', { description: 'Welcome to Liztitnow.com!' });
+      navigate('/dashboard');
+    } catch (err: any) {
+      console.error('OTP verify error:', err);
+      const msg = err.code === 'auth/invalid-verification-code'
+        ? 'Incorrect OTP. Please try again.'
+        : err.message || 'Verification failed. Please try again.';
+      toast.error('Verification Failed', { description: msg });
+    } finally {
+      setOtpVerifying(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (method === 'phone') {
-      toast.info('Phone login not implemented yet.', { description: 'Please use Email Login.' });
+      if (otpStep === 'phone') {
+        handleSendOTP();
+      } else {
+        handleVerifyOTP();
+      }
       return;
     }
 
@@ -253,20 +360,56 @@ const Login = () => {
                   )}
                 </>
               ) : (
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Phone Number
-                  </label>
-                  <div className="flex gap-2">
-                    <div className="w-20 h-12 px-3 rounded-xl bg-secondary flex items-center justify-center text-foreground font-medium">
-                      +91
+                <div className="space-y-4">
+                  {otpStep === 'phone' ? (
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Phone Number
+                      </label>
+                      <div className="flex gap-2">
+                        <div className="w-20 h-12 px-3 rounded-xl bg-secondary flex items-center justify-center text-foreground font-medium">
+                          +91
+                        </div>
+                        <input
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          placeholder="9876543210"
+                          maxLength={10}
+                          className="flex-1 h-12 px-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
                     </div>
-                    <input
-                      type="tel"
-                      placeholder="9876543210"
-                      className="flex-1 h-12 px-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
+                  ) : (
+                    <>
+                      <div className="text-center mb-2">
+                        <p className="text-sm text-muted-foreground">
+                          OTP sent to <span className="font-medium text-foreground">+91 {phone}</span>
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => { setOtpStep('phone'); setOtp(''); setConfirmationResult(null); recaptchaRef.current = null; }}
+                          className="text-xs text-primary hover:underline mt-1"
+                        >
+                          Change number
+                        </button>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Enter OTP
+                        </label>
+                        <input
+                          type="text"
+                          value={otp}
+                          onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          placeholder="Enter 6-digit OTP"
+                          maxLength={6}
+                          className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground text-center text-lg tracking-[0.5em] placeholder:tracking-normal placeholder:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          autoFocus
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -278,10 +421,18 @@ const Login = () => {
                 </div>
               )}
 
-              <Button variant="accent" size="lg" className="w-full">
-                {mode === 'login' ? 'Login' : 'Create Account'}
-                <ArrowRight className="h-5 w-5" />
+              <Button variant="accent" size="lg" className="w-full" disabled={otpSending || otpVerifying}>
+                {otpSending || otpVerifying ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : method === 'phone' ? (
+                  otpStep === 'phone' ? 'Send OTP' : 'Verify OTP'
+                ) : (
+                  mode === 'login' ? 'Login' : 'Create Account'
+                )}
+                {!otpSending && !otpVerifying && <ArrowRight className="h-5 w-5" />}
               </Button>
+              {/* Firebase reCAPTCHA container */}
+              <div id="recaptcha-container"></div>
             </form>
 
             {/* Signup Benefits */}

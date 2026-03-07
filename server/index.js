@@ -11,6 +11,7 @@ const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
 require('dotenv').config();
 const { generateInvoicePDF } = require('./utils/invoiceGenerator');
+const admin = require('firebase-admin');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -105,6 +106,28 @@ try {
 }
 
 app.use(passport.initialize());
+
+// ==========================================
+// FIREBASE ADMIN SDK SETUP
+// ==========================================
+let firebaseEnabled = false;
+try {
+    if (process.env.FIREBASE_PROJECT_ID) {
+        admin.initializeApp({
+            credential: admin.credential.cert({
+                projectId: process.env.FIREBASE_PROJECT_ID,
+                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+            }),
+        });
+        firebaseEnabled = true;
+        console.log('[Firebase] Admin SDK initialized successfully.');
+    } else {
+        console.warn('[Firebase] FIREBASE_PROJECT_ID not set. Firebase auth disabled.');
+    }
+} catch (err) {
+    console.error('[Firebase] Failed to initialize Admin SDK:', err.message);
+}
 
 // Razorpay instance
 const razorpay = new Razorpay({
@@ -490,6 +513,82 @@ app.get('/auth/google/callback', (req, res, next) => {
 });
 
 // ==========================================
+// FIREBASE PHONE AUTH ROUTE
+// ==========================================
+app.post('/api/auth/firebase', async (req, res) => {
+    try {
+        const { idToken } = req.body;
+
+        if (!idToken) {
+            return res.status(400).json({ error: 'Firebase ID token is required' });
+        }
+
+        if (!firebaseEnabled) {
+            return res.status(500).json({ error: 'Firebase is not configured on this server' });
+        }
+
+        // Verify the Firebase ID token
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const { uid, phone_number } = decodedToken;
+
+        if (!phone_number) {
+            return res.status(400).json({ error: 'No phone number found in Firebase token' });
+        }
+
+        // Find user by firebaseUid or phone number
+        let user = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { firebaseUid: uid },
+                    { phone: phone_number }
+                ]
+            }
+        });
+
+        if (user) {
+            // Update firebaseUid and phone if needed
+            const updateData = {};
+            if (!user.firebaseUid) updateData.firebaseUid = uid;
+            if (!user.phone) updateData.phone = phone_number;
+            if (Object.keys(updateData).length > 0) {
+                user = await prisma.user.update({
+                    where: { id: user.id },
+                    data: updateData
+                });
+            }
+        } else {
+            // Create new user with phone number
+            user = await prisma.user.create({
+                data: {
+                    name: null,
+                    email: null,
+                    password: null,
+                    phone: phone_number,
+                    firebaseUid: uid,
+                    referralCode: crypto.randomBytes(3).toString('hex').toUpperCase(),
+                }
+            });
+        }
+
+        const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+        res.json({
+            message: 'Login successful',
+            token,
+            user: { id: user.id, email: user.email, name: user.name, phone: user.phone, role: user.role }
+        });
+    } catch (error) {
+        console.error('Firebase auth error:', error);
+        if (error.code === 'auth/id-token-expired') {
+            return res.status(401).json({ error: 'Token expired. Please try again.' });
+        }
+        if (error.code === 'auth/argument-error') {
+            return res.status(400).json({ error: 'Invalid token format' });
+        }
+        res.status(500).json({ error: 'Authentication failed' });
+    }
+});
+
+// ==========================================
 // CATEGORY ROUTES
 // ==========================================
 
@@ -788,6 +887,14 @@ app.post('/api/ads/post', authenticate, upload.array('images', 5), async (req, r
         });
 
         if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // Require phone number to post ads
+        if (!user.phone) {
+            return res.status(403).json({
+                error: 'Phone verification required',
+                message: 'You must verify your mobile number before posting ads. Please update your phone number in your profile settings.'
+            });
+        }
 
         const {
             title, description, price, categoryId, subcategoryId,
