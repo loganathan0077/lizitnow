@@ -47,20 +47,24 @@ const Pricing = () => {
                             <div className="bg-foreground rounded-[14px] p-8 h-full text-primary-foreground relative overflow-hidden flex flex-col z-10">
                                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl mix-blend-screen" />
 
-                                <h3 className="text-2xl font-semibold mb-2">Launch Offer Plan</h3>
+                                <h3 className="text-2xl font-semibold mb-2">Early Launch Offer (Beta)</h3>
                                 <div className="text-4xl font-bold mb-6 font-display">₹1<span className="text-lg text-primary-foreground/70 font-normal">/ad</span></div>
                                 <ul className="space-y-4 mb-8 text-primary-foreground/90">
                                     <li className="flex items-center gap-2">
                                         <CheckCircle2 className="h-5 w-5 text-trust-green" />
-                                        <span>Post up to 30 ads at ₹1 each</span>
+                                        <span>Get 5 Free Ads on Signup</span>
                                     </li>
                                     <li className="flex items-center gap-2">
                                         <CheckCircle2 className="h-5 w-5 text-trust-green" />
-                                        <span>Minimum Wallet Recharge: ₹20</span>
+                                        <span>Then post ads for just ₹1 per ad</span>
                                     </li>
                                     <li className="flex items-center gap-2">
                                         <CheckCircle2 className="h-5 w-5 text-trust-green" />
-                                        <span>Pay as you post</span>
+                                        <span>Minimum Recharge: ₹50</span>
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <CheckCircle2 className="h-5 w-5 text-trust-green" />
+                                        <span>Ad Validity: 90 Days</span>
                                     </li>
                                 </ul>
                                 <Button variant="accent" className="w-full text-lg mt-auto" asChild>

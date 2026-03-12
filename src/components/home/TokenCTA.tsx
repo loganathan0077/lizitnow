@@ -15,16 +15,22 @@ const TokenCTA = () => {
             <div className="text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 text-primary-foreground text-sm font-medium mb-4">
                 <Coins className="h-4 w-4" />
-                <span>Launch Offer Plan</span>
+                <span>Early Launch Offer (Beta)</span>
               </div>
-              <h2 className="font-display text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
-                30 Ads @ <span className="text-amber">₹1 per ad</span>
+              <h2 className="font-display text-3xl md:text-3xl font-bold text-primary-foreground mb-2">
+                Get 5 Free Ads on Signup
               </h2>
-              <p className="text-lg text-primary-foreground/80 max-w-xl mb-2">
-                <span className="font-semibold text-white">Minimum Wallet Recharge: ₹20</span>
+              <p className="text-xl text-amber font-display font-medium mb-4">
+                Then post ads for just ₹1 per ad
               </p>
-              <p className="text-primary-foreground/60">
-                Pay as you post • Limited-time launch offer
+              <p className="text-lg text-primary-foreground/90 max-w-xl mb-1">
+                <span className="font-semibold text-white">Minimum Recharge: ₹50</span>
+              </p>
+              <p className="text-primary-foreground/70 mb-2">
+                Ad Validity: 90 Days
+              </p>
+              <p className="text-sm text-primary-foreground/50">
+                Special pricing available during our early launch phase
               </p>
             </div>
 
