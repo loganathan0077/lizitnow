@@ -435,18 +435,6 @@ const Login = () => {
               <div id="recaptcha-container"></div>
             </form>
 
-            {/* Signup Benefits */}
-            {mode === 'signup' && (
-              <div className="mt-6 p-4 rounded-xl bg-primary/5 border border-primary/10">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-trust-green mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Get 20 Free Tokens!</p>
-                    <p className="text-xs text-muted-foreground">Post your first 4 ads completely free</p>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Toggle Mode */}
             <div className="mt-6 text-center text-sm">
