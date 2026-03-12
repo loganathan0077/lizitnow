@@ -25,7 +25,7 @@ const HowItWorks = () => {
                             </div>
                             <h3 className="text-xl font-semibold mb-3">1. Sign Up</h3>
                             <p className="text-muted-foreground">
-                                Create your account in seconds. It's completely free and gives you immediate access to start selling.
+                                Create your account in seconds using mobile and email verification. Start exploring the marketplace instantly.
                             </p>
                         </div>
 
@@ -36,7 +36,7 @@ const HowItWorks = () => {
                             </div>
                             <h3 className="text-xl font-semibold mb-3">2. Post 5 Free Ads</h3>
                             <p className="text-muted-foreground">
-                                As a new user, you can list your first 5 items completely free. Reach thousands of buyers instantly!
+                                New users get 5 free ads on signup. List your items quickly and connect with buyers in your area.
                             </p>
                         </div>
 
@@ -45,9 +45,10 @@ const HowItWorks = () => {
                             <div className="w-16 h-16 rounded-full bg-trust-green/10 flex items-center justify-center mx-auto mb-6 text-trust-green z-10 relative">
                                 <ShieldCheck className="h-8 w-8" />
                             </div>
-                            <h3 className="text-xl font-semibold mb-3">3. Go Unlimited</h3>
+                            <h3 className="text-xl font-semibold mb-3">3. Recharge & Post More Ads</h3>
                             <p className="text-muted-foreground">
-                                Got more to sell? Buy our verified membership for just <strong className="text-foreground">₹100</strong>. It unlocks unlimited ads and keeps your account active for a full 6 months.
+                                Need to post more? Simply recharge your wallet from ₹50 and post ads for just ₹1 per ad.<br />
+                                Each ad stays active for 90 days.
                             </p>
                         </div>
 
